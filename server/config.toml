@@ -4,5 +4,5 @@ authentication-key = ""
 encryption-key = ""
 csrf-authentication-key = ""
 
-sock-name = "/tmp/tabnab-killer.sock"
+sock-name = "/tmp/stoptabnabbing.sock"
 allowed-origins = ["http://localhost:8080", "https://stoptabnabbing.online"]
