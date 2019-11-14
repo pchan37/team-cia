@@ -5,4 +5,5 @@ encryption-key = ""
 csrf-authentication-key = ""
 
 sock-name = "/tmp/stoptabnabbing.sock"
+db-name = "stoptabnabbing"
 allowed-origins = ["http://localhost:8080", "https://stoptabnabbing.online"]
