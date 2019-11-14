@@ -9,10 +9,11 @@ import (
 	"strings"
 
 	"github.com/PGo-Projects/output"
-	"github.com/pchan37/team-cia/server/internal/config"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/lpar/gzipped"
+	"github.com/pchan37/team-cia/server/internal/config"
+	"github.com/pchan37/team-cia/server/internal/views"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -38,6 +39,7 @@ func MustRun(cmd *cobra.Command, arg []string) {
 	mux.Use(middleware.Logger)
 
 	mux.MethodFunc(http.MethodGet, "/*", serveStaticOrIndex)
+	views.RegisterEndPoints(mux)
 
 	if config.DevRun {
 		output.Println("Attempting to run on localhost:8080...", output.BLUE)
