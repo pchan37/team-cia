@@ -1,8 +1,7 @@
 <template>
 <section class="hero is-primary is-fullheight">
   <!-- Hero head: will stick at the top -->
-  <div class="hero-head">
-  </div>
+  <div class="hero-head" />
 
   <!-- Hero content: will be in the middle -->
   <div class="hero-body">
