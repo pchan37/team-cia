@@ -1,22 +1,57 @@
 <template>
-<section class="hero is-primary is-fullheight">
-  <!-- Hero head: will stick at the top -->
-  <div class="hero-head" />
+<section class="hero is-info is-fullheight">
+  <div class="hero-head">
+    <nav class="navbar">
+      <div class="container">
+        <div class="navbar-brand">
+          <span
+            class="navbar-burger burger"
+            @click.stop="isOpen = !isOpen"
+            v-bind:class="{ 'is-active': isOpen }"
+            >
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+        </div>
+        <div class="navbar-menu" v-bind:class="{ 'is-active': isOpen }" :is-active="isOpen">
+          <div class="navbar-end">
+            <nuxt-link to="/blacklist" class="navbar-item">
+              Blacklist
+            </nuxt-link>
+            <nuxt-link to="/docs" class="navbar-item">
+              Documentation
+            </nuxt-link>
+          </div>
+        </div>
+      </div>
+    </nav>
+  </div>
 
-  <!-- Hero content: will be in the middle -->
   <div class="hero-body">
     <div class="container has-text-centered">
-      <h1 class="title">
-        Tabnabbing Catcher
-      </h1>
+      <p class="title">
+        Stopping Tabnabbers Online
+      </p>
     </div>
   </div>
 
-    <!-- Hero footer: will stick at the bottom -->
   <div class="hero-foot">
-    <div class="content has-text-centered">
-      <p>&copy; {{ new Date().getFullYear() }} - Team CIA</p>
-    </div>
+    <nav class="tabs is-fullwidth">
+      <div class="container has-text-centered">
+        <span>&copy; {{ new Date().getFullYear() }} - Team CIA</span>
+      </div>
+    </nav>
   </div>
 </section>
 </template>
+
+<script>
+export default {
+  data() {
+    return {
+      isOpen: false,
+    };
+  },
+};
+</script>
