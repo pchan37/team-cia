@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/PGo-Projects/output v0.0.0-20191024233243-4ba628d907d1
+	github.com/PGo-Projects/webresponse v0.0.0-20190723191328-050041f2f8ba
 	github.com/go-chi/chi v4.0.2+incompatible
 	github.com/golang/gddo v0.0.0-20190904175337-72a348e765d2 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
