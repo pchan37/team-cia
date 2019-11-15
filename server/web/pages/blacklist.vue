@@ -18,6 +18,7 @@
       />
     <b-message
       v-else
+      type="is-danger"
       >
       {{ this.status }}
     </b-message>
