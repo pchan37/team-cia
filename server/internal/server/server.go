@@ -21,10 +21,12 @@ import (
 func isValidStaticAssetPath(path string) bool {
 	webAssetsDirectory := viper.GetString(config.WebAssetsPathKey)
 	resourcePath := filepath.Join(webAssetsDirectory, path)
-	_, err := os.Stat(resourcePath)
+	stat, err := os.Stat(resourcePath)
+	if err == nil {
+		return !stat.IsDir()
+	}
 	return !os.IsNotExist(err)
 }
-
 func serveStaticOrIndex(w http.ResponseWriter, r *http.Request) {
 	potentialStaticAssetPath := strings.TrimLeft(r.URL.Path, "/")
 	if r.URL.Path == "/" || !isValidStaticAssetPath(potentialStaticAssetPath) {
@@ -38,8 +40,8 @@ func MustRun(cmd *cobra.Command, arg []string) {
 	mux := chi.NewRouter()
 	mux.Use(middleware.Logger)
 
-	mux.MethodFunc(http.MethodGet, "/*", serveStaticOrIndex)
 	views.RegisterEndPoints(mux)
+	mux.MethodFunc(http.MethodGet, "/*", serveStaticOrIndex)
 
 	if config.DevRun {
 		output.Println("Attempting to run on localhost:8080...", output.BLUE)
