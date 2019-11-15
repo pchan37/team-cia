@@ -1,0 +1,29 @@
+{
+    "name": "Extension Testing, Even More Experimental",
+    "version": "1.0",
+    "description": "Build an extension here!",
+    "manifest_version": 2,
+    "permissions": [
+        "unlimitedStorage",
+        "storage",
+        "tabs",
+        "tabCapture",
+        "webNavigation",
+        "notifications",
+        "<all_urls>"
+    ],
+    "background": {
+        "persistent": false,
+        "scripts": ["background.js"]
+    },
+    "content_scripts": [
+      {
+          "matches": [
+              "<all_urls>"
+          ],
+          "js": [
+              "content.js"
+          ]
+       }
+    ]
+}
