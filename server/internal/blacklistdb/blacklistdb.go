@@ -14,11 +14,11 @@ var (
 	dbClient = database.MustMongoClient(context.TODO(), "mongodb://localhost:27017")
 )
 
-func GetURLs() ([]blacklist.Entry, error) {
+func GetBlacklist() ([]blacklist.Entry, error) {
 	dbName := viper.GetString(config.DBName)
 	masterBlacklist := dbClient.Database(dbName).Collection("blacklist")
 
-	cursor, err := masterBlacklist.Find(context.TODO(), nil)
+	cursor, err := masterBlacklist.Find(context.TODO(), blacklist.Entry{})
 	if err != nil {
 		return nil, err
 	}
