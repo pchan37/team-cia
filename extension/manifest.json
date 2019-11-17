@@ -13,7 +13,7 @@
         "<all_urls>"
     ],
     "background": {
-        "persistent": false,
+        "persistent": true,
         "scripts": ["background.js"]
     },
     "content_scripts": [

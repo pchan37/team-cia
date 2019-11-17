@@ -1,24 +1,31 @@
 "use strict";
 
-// This doesn't work when document is interactive.
-// document.addEventListener("DOMContentLoaded", event => {
-//     let focusCapture, refocusCapture, blurCapture;
-//     console.log("The DOM is fully loaded.");
-// });
+console.log('from content.js!');
 
-// if (document.readyState === "interactive" || document.readyState === "complete") {
-//     console.log("The DOM is ready!");
-// }
+let count = 0; // for debugging purposes
 
-console.log("From content.js!");
+const port = chrome.runtime.connect({ name: 'port'});
 
-window.onfocus = focusFunction;
-window.onblur = blurFunction;
-
-function focusFunction() {
-  console.log("I'm in focus.");
+function sendCaptureMsg() {
+  port.postMessage({ action: 'Capture tab' });
 }
 
-function blurFunction() {
-  console.log("I'm blurred.");
-}
+chrome.runtime.onConnect.addListener(port => {
+  console.log('connected!');
+  // console.assert(port.name === 'port');
+  port.onMessage.addListener(message => {
+    if (message.action === 'Add event handlers') {
+      console.log(`added event handlers ${++count}`);
+      if (document.hasFocus()) {
+        console.log('document has focus');
+        sendCaptureMsg();
+      }
+      window.addEventListener('focus', sendCaptureMsg);
+      console.log('gave focus listener');
+    }
+  });
+  port.onDisconnect.addListener(port => {
+    console.log(`port ${port} disconnected`);
+    console.log(port);
+  });
+});
