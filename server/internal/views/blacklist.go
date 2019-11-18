@@ -3,6 +3,7 @@ package views
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/PGo-Projects/webresponse"
@@ -41,7 +42,8 @@ func deleteURLHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	url := r.FormValue("url")
-	if err := blacklistdb.DeleteURL(url); err != nil {
+	time := r.FormValue("time")
+	if err := blacklistdb.DeleteURL(url, time); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

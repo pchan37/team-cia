@@ -217,10 +217,11 @@ export default {
     async removeFromBlacklist() {
       const resp = await fetch('/', (response) => response);
       let errorOccurred = false;
-      this.checkedRows.forEach((url) => {
-        axios.post(DELETE_ENDPOINT, {
-          url,
-        }, {
+      this.checkedRows.forEach((entry) => {
+        const params = new URLSearchParams();
+        params.append('url', entry.url);
+        params.append('time', entry.time);
+        axios.post(DELETE_ENDPOINT, params, {
           headers: { 'X-CSRF-TOKEN': resp.headers.get('X-CSRF-TOKEN') },
         }).catch(() => {
           errorOccurred = true;

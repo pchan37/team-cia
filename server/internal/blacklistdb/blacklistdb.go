@@ -48,12 +48,13 @@ func AddURL(url string) error {
 	return err
 }
 
-func DeleteURL(url string) error {
+func DeleteURL(url, time string) error {
 	dbName := viper.GetString(config.DBName)
 	masterBlacklist := dbClient.Database(dbName).Collection("blacklist")
 
 	entry := &blacklist.Entry{
-		URL: url,
+		URL:  url,
+		Time: time,
 	}
 	_, err := masterBlacklist.DeleteOne(context.TODO(), entry)
 	return err
