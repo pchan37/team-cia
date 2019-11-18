@@ -43,6 +43,9 @@ export default {
     // Doc: https://buefy.github.io/#/documentation
     'nuxt-buefy'
   ],
+  router: {
+    middleware: ['security'],
+  },
   /*
   ** Build configuration
   */
