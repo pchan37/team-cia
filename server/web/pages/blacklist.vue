@@ -5,16 +5,16 @@
       <div class="container">
         <div class="navbar-brand">
           <span
-            class="navbar-burger burger"
-            @click.stop="isOpen = !isOpen"
             v-bind:class="{ 'is-active': isOpen }"
+            @click.stop="isOpen = !isOpen"
+            class="navbar-burger burger"
             >
-            <span></span>
-            <span></span>
-            <span></span>
+            <span />
+            <span />
+            <span />
           </span>
         </div>
-        <div class="navbar-menu" v-bind:class="{ 'is-active': isOpen }" :is-active="isOpen">
+        <div v-bind:class="{ 'is-active': isOpen }" :is-active="isOpen" class="navbar-menu">
           <div class="navbar-end">
             <nuxt-link to="/" class="navbar-item">
               Home
@@ -22,6 +22,9 @@
             <nuxt-link to="/docs" class="navbar-item">
               Documentation
             </nuxt-link>
+            <a v-if="username !== undefined" @click="logout" class="navbar-item">
+              Logout
+            </a>
           </div>
         </div>
       </div>
@@ -29,14 +32,21 @@
   </div>
 
   <div class="hero-body">
-    <div class="container has-white-background has-sm-padding is-rounded">
-    <h1 class="title has-black-text">
+    <div class="container has-background-white has-sm-padding is-rounded">
+    <h1 class="title has-text-black">
       Blacklist
     </h1>
 
+    <b-field label="Filter by URL">
+      <div class="columns">
+        <div class="column is-half">
+          <b-input v-model="filter" />
+        </div>
+      </div>
+    </b-field>
     <b-table
-      v-if="this.statusType !== 'error'"
-      :data="data"
+      v-if="statusType !== 'error'"
+      :data="filtered_data"
       :columns="columns"
       :color="info"
       paginated
@@ -50,7 +60,7 @@
       v-else
       type="is-danger"
       >
-      {{ this.status }}
+      {{ status }}
     </b-message>
     </div>
   </div>
@@ -68,7 +78,11 @@
 <script>
 import axios from 'axios';
 
+import { mapActions, mapGetters } from 'vuex';
+import authenticationMixin from '../mixins/authentication';
+
 export default {
+  mixins: [authenticationMixin],
   data() {
     return {
       data: [],
@@ -76,40 +90,56 @@ export default {
         {
           field: 'url',
           label: 'URL',
-          searchable: true,
         },
         {
           field: 'time',
           label: 'Time added',
-          searchable: true,
         },
       ],
+
+      filter: '',
+      isOpen: false,
       status: '',
       statusType: '',
     };
+  },
+  computed: {
+    ...mapGetters('authentication', ['username']),
+    filtered_data() {
+      const filterPattern = new RegExp(this.filter, 'i');
+      const data = [];
+      this.data.forEach((entry) => {
+        if (entry.url.match(filterPattern)) {
+          data.push(entry);
+        }
+      });
+      return data;
+    },
   },
   asyncData() {
     return axios.get('/get_blacklist')
       .then((response) => ({ data: response.data }))
       .catch((error) => error.response.data);
   },
+  created() {
+    this.checkAuth();
+  },
+  methods: {
+    ...mapActions('authentication', ['checkAuth']),
+  },
 };
 </script>
 
 <style lang="scss">
+$info: hsl(204, 86%, 53%);
+
 .pagination-link.is-current {
-    background-color: hsl(204, 86%, 53%); 
-    border-color: hsl(204, 86%, 53%);
-}
-.has-white-background {
-    background-color: white;
-}
-.has-black-text {
-    color: black !important;
+    background-color: $info;
+    border-color: $info;
 }
 .has-sm-padding {
-    padding: 10px;
-} 
+    padding: 20px;
+}
 .is-rounded {
     border-radius: 15px;
 }
