@@ -175,6 +175,9 @@ export default {
   computed: {
     ...mapGetters('authentication', ['username']),
     filtered_data() {
+      if (this.data === null) {
+        this.data = [];
+      }
       const filterPattern = new RegExp(this.filter, 'i');
       const data = [];
       this.data.forEach((entry) => {
