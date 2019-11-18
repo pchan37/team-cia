@@ -5,16 +5,16 @@
       <div class="container">
         <div class="navbar-brand">
           <span
-            class="navbar-burger burger"
             @click.stop="isOpen = !isOpen"
             v-bind:class="{ 'is-active': isOpen }"
+            class="navbar-burger burger"
             >
-            <span></span>
-            <span></span>
-            <span></span>
+            <span />
+            <span />
+            <span />
           </span>
         </div>
-        <div class="navbar-menu" v-bind:class="{ 'is-active': isOpen }" :is-active="isOpen">
+        <div v-bind:class="{ 'is-active': isOpen }" :is-active="isOpen" class="navbar-menu">
           <div class="navbar-end">
             <nuxt-link to="/blacklist" class="navbar-item">
               Blacklist
@@ -22,6 +22,9 @@
             <nuxt-link to="/docs" class="navbar-item">
               Documentation
             </nuxt-link>
+            <a v-if="username !== undefined" @click="logout" class="navbar-item">
+              Logout
+            </a>
           </div>
         </div>
       </div>
@@ -47,11 +50,24 @@
 </template>
 
 <script>
+import { mapActions, mapGetters } from 'vuex';
+import authenticationMixin from '../mixins/authentication';
+
 export default {
+  mixins: [authenticationMixin],
   data() {
     return {
       isOpen: false,
     };
+  },
+  computed: {
+    ...mapGetters('authentication', ['username']),
+  },
+  created() {
+    this.checkAuth();
+  },
+  methods: {
+    ...mapActions('authentication', ['checkAuth']),
   },
 };
 </script>
