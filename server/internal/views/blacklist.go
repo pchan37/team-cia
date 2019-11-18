@@ -3,7 +3,6 @@ package views
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/PGo-Projects/webresponse"
