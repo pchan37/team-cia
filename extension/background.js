@@ -1,4 +1,4 @@
-"use strict"
+"use strict";
 
 let tabCount = 0; // for debugging purposes
 let captureCount = 0; // for debugging purposes
@@ -6,34 +6,45 @@ let hasHandlerTracker = {};
 let prevURLTracker = {};
 
 chrome.runtime.onConnect.addListener(port => {
-  console.log('connected!');
-  console.assert(port.name === 'port');
-  port.onMessage.addListener(message => {
-    console.log("i've got a message from content script!");
-    if (message.action === 'Capture tab') {
-      console.log('heard a capture tab from the content script');
+  console.log("connected!");
+  port.onMessage.addListener((message, messageSender) => {
+    console.log(message);
+    if (message.action === "Capture tab") {
+      console.log("heard a capture tab from the content script");
       captureTab();
+    }
+    if (message.action === "Check if same tab") {
+      console.log("been told to check if same tab");
+      chrome.tabs.query({ currentWindow: true, active: true }, tabs => {
+        try {
+          let activeTabId = tabs[0].id;
+          let senderTabId = messageSender.sender.tab.id;
+          if (activeTabId === senderTabId) {
+            console.log("same tab");
+          } else {
+            console.log("different tabs");
+          }
+        } catch (e) {
+          // do nothing
+        }
+      });
     }
   });
   port.onDisconnect.addListener(port => {
     console.log(`port ${port} disconnected`);
-    console.log(port);
   });
 });
 
 chrome.tabs.onCreated.addListener(tab => {
-  console.log('tab created');
+  console.log("tab created");
 });
 
 chrome.tabs.onActivated.addListener(activeInfo => {
-  console.log('on activated triggered');
-  if (chrome.runtime.lastError) {
-    return;
-  }
+  console.log("on activated triggered");
   let { tabId } = activeInfo;
   if (!(tabId in hasHandlerTracker)) {
     let port = chrome.tabs.connect(tabId);
-    port.postMessage({ action: 'Add event handlers' });
+    port.postMessage({ action: "Add event handlers" });
     chrome.tabs.get(tabId, tab => {
       hasHandlerTracker[tabId] = true;
       prevURLTracker[tabId] = tab.url;
@@ -45,20 +56,22 @@ chrome.tabs.onActivated.addListener(activeInfo => {
       console.log(`prevURL ${prevURL}`);
       console.log(`currentURL ${currentURL}`);
       if (prevURL === currentURL) {
-        console.log('put through pixelmatch');
+        console.log("put through pixelmatch");
+        // retrieve old data URI
       }
     });
   }
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  let statusComplete = changeInfo.status === 'complete' && tab.status === 'complete';
+  let statusComplete = changeInfo.status === "complete" && tab.status === "complete";
   if (statusComplete && tab.active) {
-    console.log('on updated triggered');
+    console.log("on updated triggered");
     chrome.tabs.get(tabId, tab => {
       if (tab !== undefined && prevURLTracker[tabId] !== tab.url) {
+        prevURLTracker[tabId] = tab.url;
         let port = chrome.tabs.connect(tabId);
-        port.postMessage({ action: 'Add event handlers' });
+        port.postMessage({ action: "Add event handlers" });
       }
     });
     console.log(`done loading tab #${++tabCount}`);
@@ -66,27 +79,36 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 });
 
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-  console.log('on removed triggered');
-  if (tabId in hasHandlerTracker)
-    delete hasHandlerTracker[tabId];
-  if (tabId in prevURLTracker)
-    delete prevURLTracker[tabId];
+  console.log("on removed triggered");
+  if (tabId in hasHandlerTracker) delete hasHandlerTracker[tabId];
+  if (tabId in prevURLTracker) delete prevURLTracker[tabId];
   console.log(`removed tab#${tabId} from dictionaries`);
 });
 
 function captureTab() {
   chrome.tabs.captureVisibleTab(chrome.windows.WINDOW_ID_CURRENT, { format: "png" }, dataURI => {
+    console.log("capturing visible tab");
     if (chrome.runtime.lastError) {
       return;
     }
-    chrome.storage.local.get({ captured: [] }, s => {
+    chrome.tabs.query({ currentWindow: true, active: true }, tabs => {
       if (dataURI !== undefined) {
-        s.captured.push(dataURI);
-        console.log(dataURI);
-        chrome.storage.local.set({ captured: s.captured });
+        let activeTabId = tabs[0].id.toString();
+        chrome.storage.local.set({ [activeTabId]: dataURI }, () => {
+          console.log("set the data");
+          console.log(activeTabId);
+          console.log(dataURI);
+        });
+        chrome.storage.local.get([activeTabId], result => {
+          console.log(`the active tabid is ${activeTabId}`);
+          console.log(`the result is ${result[activeTabId]}`);
+        });
+      } else {
+        console.log("dataURI is undefined");
       }
     });
-  });
+  }
+  );
 }
 
 function convertDataURIToBinary(dataURI) {
@@ -97,8 +119,7 @@ function convertDataURIToBinary(dataURI) {
   let rawLength = raw.length;
   let array = new Uint8Array(new ArrayBuffer(rawLength));
 
-  for (let i = 0; i < rawLength; i++) 
-    array[i] = raw.charCodeAt(i);
+  for (let i = 0; i < rawLength; i++) array[i] = raw.charCodeAt(i);
 
   return array;
 }

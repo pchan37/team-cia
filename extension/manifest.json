@@ -14,16 +14,19 @@
     ],
     "background": {
         "persistent": true,
-        "scripts": ["background.js"]
+        "scripts": [
+            "background.js"
+        ]
     },
     "content_scripts": [
-      {
-          "matches": [
-              "<all_urls>"
-          ],
-          "js": [
-              "content.js"
-          ]
-       }
+        {
+            "matches": [
+                "https://*/*",
+                "http://*/*"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
     ]
 }
