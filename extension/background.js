@@ -147,38 +147,52 @@ function compareImages(image1, image2, width, height){
   showDifferences(outputData);
 }
 
-function showDifferences(outputData)
+// outputData is an ImageData, beforeCanvas is a canvas 
+function showDifferences(beforeCanvas,outputData)
 {
-  let outputCanvas = document.createElement('canvas'); //  new HTMLCanvasElement();
-  outputCanvas.width = outputData.width;
-  outputCanvas.height = outputData.height;
-  let outputContext = outputCanvas.getContext('2d');
-  outputContext.putImageData(outputData, 0, 0);
+    let outputCanvas = document.createElement('canvas'); //  new HTMLCanvasElement();
+    outputCanvas.width = outputData.width;
+    outputCanvas.height = outputData.height;
 
-  //let outputImage = document.getElementById('outputImage');
-  //outputImage.appendChild(outputContext.canvas);
+    let outputContext = outputCanvas.getContext('2d');
+    outputContext.putImageData(outputData, 0, 0);
     
-  // Displays difference in new tab 
-  let url = outputCanvas.toDataURL("image/png");
-  let tab = window.open('about:blank','image from canvas');
-  tab.document.write("<img src='"+ url +"' alt='from canvas'/>");
+    // Determine if the output passes threshold 
+    let pass = checkThreshold(ouputData);
+    // Shows the image in the same window as the other images 
+    // let outputImage = document.getElementById('outputImage');
+    // outputImage.appendChild(outputContext.canvas);
+    
+    if (pass === true){
+        // Displays difference in new tab 
+        let url = outputCanvas.toDataURL("image/png"); // src of the output image 
+        let urlBefore = beforeCanvas.toDataURL("beforeImage/png");
+        // let tab = window.open('about:blank','image from canvas');
+        // tab.document.write("<img src='"+ urlBefore +"' alt='from canvas'/>");
+        // tab.document.write("<img src='"+ url +"' alt='from canvas'/>");
+        
+        // Display as a popup
+        // if (document.getElementById) {
+        //     w = screen.availWidth;
+        //     h = screen.availHeight;
+        // }  
+        
+        // let popW = outputData.width, popH = outputData.height;
+        
+        // let leftPos = (w-popW)/2;
+        // let topPos = (h-popH)/2;
 
-
-  // Display as a popup
-  // if (document.getElementById) {
-  //     w = screen.availWidth;
-  //     h = screen.availHeight;
-  //  }  
-     
-  //  var popW = outputData.width, popH = outputData.height;
-   
-  //  var leftPos = (w-popW)/2;
-  //  var topPos = (h-popH)/2;
-
-  //  let popup = window.open('','popup','width=' + popW + ',height=' + popH + 
-  //                           ',top=' + topPos + ',left=' + leftPos + ',       scrollbars=yes');
-  //  popup.document.write("<img src='"+ url +"' alt='from canvas'/>");
+        // let popup = window.open('','popup','width=' + popW + ',height=' + popH + 
+        //                         ',top=' + topPos + ',left=' + leftPos + ',       scrollbars=yes');
+        // popup.document.write("<img src='"+ urlBefore +"' alt='from canvas'/>");
+        // popup.document.write("<img src='"+ url +"' alt='from canvas'/>");
+    }
 } 
+
+// This will always return true for now 
+function checkThreshold(outputData){
+    return true;
+}
 
 // Get the dimensions of the images 
 async function getDimensions(base64String){
@@ -195,16 +209,33 @@ async function getDimensions(base64String){
 //Inputs are two binary64 strings
 function compare(string1, string2){
   console.log("compare.js called");
-  let image1 = new Image();
-  image1.src = string1;
-
-  let image2 = new Image();
-  image2.src = string2;
-
-  let result = getDimensions(string1);
-  result.then (data => {
-      compareImages(image1, image2, data.w, data.h);
-  });
+  if (string1 !== string1){
+    console.log("Base64 is not equal. Checking Dimensions");
+    let image1 = new Image();
+    image1.src = string1;
+  
+    let image2 = new Image();
+    image2.src = string2;
+  
+    let result1 = getDimensions(base1);
+    let result2 = getDimensions(base2);
+    Promise.all([result1, result2]).then(function(values){
+        let img1W = (values[0]).w;
+        let img1H = (values[0]).h;
+        let img2W = (values[1]).w;
+        let img2H = (values[1]).h;
+        if ((img1W !== img2W) || (img1H !== img2H)){
+            // Handle in notification 
+            console.log("Image different Dimensions. Can't put through pixelmatch")
+        }
+        else{
+            compareImages(image1, image2, img1W, img2G);
+        }
+    });
+  }
+  else{
+    console.log("Base64 strings are the same. No need to put through pixelmatch");
+  }
 };
 /******************************************************************/
 /****************** COMPARISON CODE ENDS HERE *********************/
