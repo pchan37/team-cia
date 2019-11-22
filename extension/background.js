@@ -45,7 +45,6 @@ chrome.tabs.onActivated.addListener(activeInfo => {
       console.log(`prevURL ${prevURL}`);
       console.log(`currentURL ${currentURL}`);
       if (prevURL === currentURL) {
-        //compare(prevURL, currentURL);
         console.log('put through pixelmatch');
       }
     });
@@ -104,8 +103,10 @@ function convertDataURIToBinary(dataURI) {
   return array;
 }
 
+/******************************************************************/
+/***************** COMPARISON CODE STARTS HERE ********************/
+/******************************************************************/
 
-/***************** COMPARISON CODE STARTS HERE *********************/
 // Create a canvas for the image 
 function createCanvas(image, width, height){
   let canvas = document.createElement('canvas');
@@ -154,8 +155,29 @@ function showDifferences(outputData)
   let outputContext = outputCanvas.getContext('2d');
   outputContext.putImageData(outputData, 0, 0);
 
-  let outputImage = document.getElementById('outputImage');
-  outputImage.appendChild(outputContext.canvas);
+  //let outputImage = document.getElementById('outputImage');
+  //outputImage.appendChild(outputContext.canvas);
+    
+  // Displays difference in new tab 
+  let url = outputCanvas.toDataURL("image/png");
+  let tab = window.open('about:blank','image from canvas');
+  tab.document.write("<img src='"+ url +"' alt='from canvas'/>");
+
+
+  // Display as a popup
+  // if (document.getElementById) {
+  //     w = screen.availWidth;
+  //     h = screen.availHeight;
+  //  }  
+     
+  //  var popW = outputData.width, popH = outputData.height;
+   
+  //  var leftPos = (w-popW)/2;
+  //  var topPos = (h-popH)/2;
+
+  //  let popup = window.open('','popup','width=' + popW + ',height=' + popH + 
+  //                           ',top=' + topPos + ',left=' + leftPos + ',       scrollbars=yes');
+  //  popup.document.write("<img src='"+ url +"' alt='from canvas'/>");
 } 
 
 // Get the dimensions of the images 
@@ -183,13 +205,17 @@ function compare(string1, string2){
   result.then (data => {
       compareImages(image1, image2, data.w, data.h);
   });
-
 };
-/****************** COMPARISON CODE ENDS HERE **********************/
+/******************************************************************/
+/****************** COMPARISON CODE ENDS HERE *********************/
+/******************************************************************/
 
 
 
-/************ PIXELMATCH SOURCE CODE STARTS HERE  ******************/
+/******************************************************************/
+/*********** PIXELMATCH SOURCE CODE STARTS HERE  ******************/
+/******************************************************************/
+
 const defaultOptions = {
     threshold: 0.1,         // matching threshold (0 to 1); smaller is more sensitive
     includeAA: false,       // whether to skip anti-aliasing detection
@@ -417,4 +443,6 @@ function drawGrayPixel(img, i, alpha, output) {
     const val = blend(rgb2y(r, g, b), alpha * img[i + 3] / 255);
     drawPixel(output, i, val, val, val);
 }
-/************* PIXELMATCH SOURCE CODE ENDS HERE  *******************/
+/******************************************************************/
+/************* PIXELMATCH SOURCE CODE ENDS HERE  ******************/
+/******************************************************************/
