@@ -11,10 +11,6 @@ chrome.runtime.onConnect.addListener(port => {
   console.log("connected!");
   port.onMessage.addListener((message, messageSender) => {
     console.log(message);
-    if (message.action === "Capture tab") {
-      console.log("heard a capture tab from the content script");
-      captureTab();
-    }
     if (message.action === "Sending origin") {
       console.log('ORIGIN WAS SENT!!!!!!!');
       let origin = message.info.origin;
@@ -38,47 +34,12 @@ chrome.tabs.onCreated.addListener(tab => {
 chrome.tabs.onActivated.addListener(activeInfo => {
   console.log("on activated triggered");
   let { tabId } = activeInfo;
-  if (!(tabId in hasHandlerTracker)) {
-    let port = chrome.tabs.connect(tabId);
-    port.postMessage({ action: "Add event handlers" });
-    chrome.tabs.get(tabId, tab => {
-      hasHandlerTracker[tabId] = true;
-      prevURLTracker[tabId] = tab.url;
-    });
-  } else {
-    chrome.tabs.get(tabId, tab => {
-      let prevURL = prevURLTracker[tabId];
-      let currentURL = tab.url;
-      console.log(`prevURL ${prevURL}`);
-      console.log(`currentURL ${currentURL}`);
-      if (prevURL === currentURL) {
-        console.log("put through pixelmatch");
-        let port = chrome.tabs.connect(tabId);
-        port.postMessage({
-          action: 'Fetch origin',
-          tabId: tabId
-        });
-        // retrieve old data URI
-        // If current URI exists, then get old and current URI
-        // Call compare(oldURI, newURI)
-        // Set [tabid] = dataURI to current 
-        // set current to undefined
-        // chrome.storage.local.get(tabId.toString(), result1 => {
-        //   let oldDataURI = result1[tabId];
-        //   console.log("Old Data URI to Compare " + oldDataURI);
-        //   chrome.storage.local.get("current", result2 => {
-        //     let newDataURI = result2.current;
-        //     console.log("New Data URI to Compare " + newDataURI);
-        //     if (newDataURI !== null || newDataURI !== undefined) {
-        //       compare(oldDataURI, newDataURI);
-        //     }
-        //     // chrome.storage.local.set({[tabId]: newDataURI});
-        //     // chrome.storage.local.set({current: null});
-        //   });
-        // });
-      };
-    });
-  };
+  tabId = tabId.toString();
+  chrome.storage.local.get([tabId], result => {
+    if (result[tabId] !== null && result[tabId] !== undefined) {
+      captureTabThenGuardedCompare();
+    } 
+  });
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
@@ -88,8 +49,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     chrome.tabs.get(tabId, tab => {
       if (tab !== undefined && prevURLTracker[tabId] !== tab.url) {
         prevURLTracker[tabId] = tab.url;
-        let port = chrome.tabs.connect(tabId);
-        port.postMessage({ action: "Add event handlers" });
+        captureTabThenGuardedCompare();
       }
     });
     console.log(`done loading tab #${++tabCount}`);
@@ -103,27 +63,27 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
   console.log(`removed tab#${tabId} from dictionaries`);
 });
 
-function captureTab() {
+function captureTabThenGuardedCompare() {
   chrome.tabs.captureVisibleTab(chrome.windows.WINDOW_ID_CURRENT, { format: "png" }, dataURI => {
     console.log("capturing visible tab");
     if (chrome.runtime.lastError) {
       return;
     }
     chrome.tabs.query({ currentWindow: true, active: true }, tabs => {
-      if (dataURI !== undefined || dataURI !== null) {
+      if (dataURI !== undefined && dataURI !== null) {
         let activeTabId = tabs[0].id.toString();
         chrome.storage.local.get([activeTabId], result => {
+          console.log(`This is what's found ${result[activeTabId]}`);
           if (result[activeTabId] === null || result[activeTabId] === undefined) {
             chrome.storage.local.set({ [activeTabId]: dataURI }, () => {
-              console.log("set the data");
+              console.log("set the data for the first time");
             });
           } else {
-            chrome.storage.local.set({ current: dataURI });
+              chrome.storage.local.set({ current: dataURI }, () => {
+                  guardedCompare(tabs[0].id);
+              });
           }
         });
-        // chrome.storage.local.get('current', result => {
-        //   console.log(`the result is ${result.current}`);
-        // });
       } else {
         console.log('datauri is undefined');
       }
@@ -131,10 +91,36 @@ function captureTab() {
   });
 }
 
+function guardedCompare(tabId) {
+  chrome.tabs.get(tabId, tab => {
+    let prevURL = prevURLTracker[tabId];
+    let currentURL = tab.url;
+    console.log(`prevURL ${prevURL}`);
+    console.log(`currentURL ${currentURL}`);
+    if (prevURL === currentURL) {
+      console.log("put through pixelmatch");
+      let port = chrome.tabs.connect(tabId);
+      port.postMessage({
+        action: 'Fetch origin',
+        tabId: tabId
+      });
+      chrome.storage.local.get([tabId.toString(), "current"], result => {
+        let oldDataURI = result[tabId];
+        let newDataURI = result["current"];
+        console.log(newDataURI);
+        if (newDataURI !== null && newDataURI !== undefined) {
+          compare(oldDataURI, newDataURI);
+          chrome.storage.local.set({[tabId]: newDataURI});
+          chrome.storage.local.set({current: null});
+        }
+      });
+    };
+  });
+}
+
 /******************************************************************/
 /***************** COMPARISON CODE STARTS HERE ********************/
 /******************************************************************/
-
 // Create a canvas for the image 
 function createCanvas(image, width, height) {
   let canvas = document.createElement('canvas');
@@ -195,16 +181,16 @@ function showDifferences(beforeCanvas, outputData) {
     // Displays difference in new tab 
     let url = outputCanvas.toDataURL("image/png"); // src of the output image 
     let urlBefore = beforeCanvas.toDataURL("beforeImage/png");
-    // let tab = window.open('about:blank','image from canvas');
-    // tab.document.write("<img src='"+ urlBefore +"' alt='from canvas'/>");
-    // tab.document.write("<img src='"+ url +"' alt='from canvas'/>");
+    let tab = window.open('about:blank','image from canvas');
+    tab.document.write("<img src='"+ urlBefore +"' alt='from canvas'/>");
+    tab.document.write("<img src='"+ url +"' alt='from canvas'/>");
 
     // Display as a popup
     // if (document.getElementById) {
     //     let w = screen.availWidth;
     //     let h = screen.availHeight;
     // }  
-    //let screen = document.getElementById;
+    let screen = document.getElementById;
     let w = screen.availWidth;
     let h = screen.availHeight;
     console.log("This is width: " + outputData.width);

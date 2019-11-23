@@ -6,13 +6,6 @@ let count = 0; // for debugging purposes
 
 const port = chrome.runtime.connect();
 
-function sendCaptureMsg() {
-  port.postMessage({
-    action: 'Capture tab',
-    from: 'Focus event'
-  });
-}
-
 function sendOrigin(origin, tabId) {
   port.postMessage({
     action: 'Sending origin',
@@ -27,17 +20,6 @@ chrome.runtime.onConnect.addListener(port => {
   console.log('connected!');
   port.onMessage.addListener(message => {
     console.log(message);
-    if (message.action === 'Add event handlers') {
-      console.log(`added event handlers ${++count}`);
-      if (document.hasFocus()) {
-        console.log('document has focus');
-        sendCaptureMsg();
-      }
-      window.addEventListener('focus', sendCaptureMsg);
-      console.log('gave focus listener sendcapturemsg');
-      window.addEventListener('blur', sendBlurMsg);
-      console.log('gave blur listener sendblurmsg');
-    }
     if (message.action === 'Fetch origin') {
       let origin = window.location.origin;
       console.log(origin);
