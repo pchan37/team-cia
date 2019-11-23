@@ -41,6 +41,10 @@ chrome.runtime.onConnect.addListener(port => {
         // put through pixelmatch
       }
     }
+    if (message.action === 'Capture tab') {
+      console.log('been told to capture tab!!!!');
+      captureTabThenGuardedCompare();
+    }
   });
 });
 
@@ -72,6 +76,13 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     chrome.tabs.get(tabId, tab => {
       if (tab !== undefined) {
         if (prevURLTracker[tabId] !== tab.url) {
+          let port = chrome.tabs.connect(tabId);
+          port.postMessage({
+            action: 'Add resize handler',
+            info: {
+              tabId: tabId
+            }
+          });
           prevURLTracker[tabId] = tab.url;
           chrome.storage.local.set({ [tabId.toString()]: null });
         }
@@ -140,8 +151,8 @@ function guardedCompare(tabId) {
         if (newDataURI !== null && newDataURI !== undefined) {
           compare(oldDataURI, newDataURI, tab.url);
           console.log("Tab URL is " + tab.url);
-          chrome.storage.local.set({[tabId]: newDataURI});
-          chrome.storage.local.set({current: null});
+          chrome.storage.local.set({ [tabId]: newDataURI });
+          chrome.storage.local.set({ current: null });
         }
       });
     };
