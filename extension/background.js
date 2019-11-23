@@ -7,6 +7,19 @@ let dummyBlacklist = new Set(['https://pchancs.com/']);
 let hasHandlerTracker = {};
 let prevURLTracker = {};
 
+const notifyID = "Notification";
+const options = {
+  type: "basic",
+  iconUrl: "sus_image.png",
+  title: "Changes in Tab Detected!",
+  message: "Would you like to view?",
+  buttons: [{
+    title: "Yes",
+  }, {
+    title: "No",
+  }]
+};
+
 chrome.runtime.onConnect.addListener(port => {
   console.log("connected!");
   port.onMessage.addListener((message, messageSender) => {
@@ -178,41 +191,40 @@ function showDifferences(beforeCanvas, outputData) {
   // outputImage.appendChild(outputContext.canvas);
 
   if (pass === true) {
-    // Displays difference in new tab 
-    let url = outputCanvas.toDataURL("image/png"); // src of the output image 
-    let urlBefore = beforeCanvas.toDataURL("beforeImage/png");
-    let tab = window.open('about:blank','image from canvas');
-    tab.document.write("<img src='"+ urlBefore +"' alt='from canvas'/>");
-    tab.document.write("<img src='"+ url +"' alt='from canvas'/>");
 
-    // Display as a popup
-    // if (document.getElementById) {
-    //     let w = screen.availWidth;
-    //     let h = screen.availHeight;
-    // }  
-    let screen = document.getElementById;
-    let w = screen.availWidth;
-    let h = screen.availHeight;
-    console.log("This is width: " + outputData.width);
-    console.log("This is height: " + outputData.height);
-    let popW = outputData.width, popH = outputData.height;
+    chrome.notifications.create(notifyID, options);
+    chrome.notifications.onButtonClicked.addListener((notifid, btnIdx) => {
+      if (btnIdx === 0) {
+        // Displays difference in new tab 
+        let url = outputCanvas.toDataURL("image/png"); // src of the output image 
+        let urlBefore = beforeCanvas.toDataURL("beforeImage/png");
+       
+        let screen = document.getElementById;
+        let w = screen.availWidth;
+        let h = screen.availHeight;
+        console.log("This is width: " + outputData.width);
+        console.log("This is height: " + outputData.height);
+        let popW = outputData.width, popH = outputData.height;
 
-    let leftPos = (w - popW) / 2;
-    let topPos = (h - popH) / 2;
+        let leftPos = (w - popW) / 2;
+        let topPos = (h - popH) / 2;
 
-    let popup = window.open('', 'popup', 'width=' + popW + ',height=' + popH +
-      ',top=' + topPos + ',left=' + leftPos + ',       scrollbars=yes');
+        let popup = window.open('', 'popup', 'width=' + popW + ',height=' + popH +
+          ',top=' + topPos + ',left=' + leftPos + ',       scrollbars=yes');
 
-    let beforeElement = popup.document.getElementById('beforeCanvas');
-    let outputElemenet = popup.document.getElementById('outputImage');
-    if (beforeElement !== null){
-        //Remove if there is already data in the window
-        beforeElement.parentNode.removeChild(beforeElement);
-        outputElemenet.parentNode.removeChild(outputElemenet);
-    }
+        let beforeElement = popup.document.getElementById('beforeCanvas');
+        let outputElemenet = popup.document.getElementById('outputImage');
+        if (beforeElement !== null){
+          //Remove if there is already data in the window
+          beforeElement.parentNode.removeChild(beforeElement);
+          outputElemenet.parentNode.removeChild(outputElemenet);
+        }
     
-    popup.document.write("<img src='" + urlBefore + "' alt='from canvas'/>");
-    popup.document.write("<img src='" + url + "' alt='from canvas'/>");
+        popup.document.write("<img src='" + urlBefore + "' alt='from canvas'/>");
+        popup.document.write("<img src='" + url + "' alt='from canvas'/>");
+      }
+      chrome.notifications.clear(notifyID);
+    });
   }
 }
 
