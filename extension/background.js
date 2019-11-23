@@ -145,7 +145,7 @@ function guardedCompare(tabId) {
           compare(oldDataURI, newDataURI, tab.url);
           console.log("Tab URL is " + tab.url);
           chrome.storage.local.set({[tabId]: newDataURI});
-          chrome.storagoe.local.set({current: null});
+          chrome.storage.local.set({current: null});
         }
       });
     };
@@ -234,7 +234,7 @@ function showDifferences(beforeCanvas, outputData, taburl) {
 
         let beforeElement = popup.document.getElementById('beforeCanvas');
         let outputElemenet = popup.document.getElementById('outputImage');
-        if (beforeElement !== null){
+        if (beforeElement !== null || outputElement != null){
           //Remove if there is already data in the window
           beforeElement.parentNode.removeChild(beforeElement);
           outputElemenet.parentNode.removeChild(outputElemenet);
