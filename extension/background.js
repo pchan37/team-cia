@@ -226,18 +226,19 @@ function showDifferences(beforeCanvas, outputData, taburl) {
         let topPos = (h - popH) / 2;
 
         let popup = window.open('', 'popup', 'width=' + popW + ',height=' + popH +
-          ',top=' + topPos + ',left=' + leftPos + ',       scrollbars=yes');
+          ',top=' + topPos + ',left=' + leftPos + ',    scrollbars=yes');
 
         let beforeElement = popup.document.getElementById('beforeCanvas');
         let outputElemenet = popup.document.getElementById('outputImage');
+        console.log("This is the before canvas " + beforeElement);
         if (beforeElement !== null) {
           //Remove if there is already data in the window
           beforeElement.parentNode.removeChild(beforeElement);
           outputElemenet.parentNode.removeChild(outputElemenet);
         }
 
-        popup.document.write("<img src='" + urlBefore + "' alt='from canvas'/>");
-        popup.document.write("<img src='" + url + "' alt='from canvas'/>");
+        popup.document.write("<img id='beforeCanvas' src='" + urlBefore + "' alt='from canvas'/>");
+        popup.document.write("<img id='outputImage' src='" + url + "' alt='from canvas'/>");
         popup.document.title = "Differences for: " + taburl;
       }
       chrome.notifications.clear(notifyID);
