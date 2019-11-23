@@ -13,14 +13,6 @@ function sendCaptureMsg() {
   });
 }
 
-function sendBlurMsg() {
-  console.log('out of focus');
-  port.postMessage({
-    action: 'Check if same tab',
-    from: 'Blur event'
-  });
-}
-
 function sendOrigin(origin, tabId) {
   port.postMessage({
     action: 'Sending origin',

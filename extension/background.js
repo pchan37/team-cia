@@ -15,22 +15,6 @@ chrome.runtime.onConnect.addListener(port => {
       console.log("heard a capture tab from the content script");
       captureTab();
     }
-    if (message.action === "Check if same tab") {
-      console.log("been told to check if same tab");
-      chrome.tabs.query({ currentWindow: true, active: true }, tabs => {
-        try {
-          let activeTabId = tabs[0].id;
-          let senderTabId = messageSender.sender.tab.id;
-          if (activeTabId === senderTabId) {
-            console.log("same tab");
-          } else {
-            console.log("different tabs");
-          }
-        } catch (e) {
-          // do nothing
-        }
-      });
-    }
     if (message.action === "Sending origin") {
       console.log('ORIGIN WAS SENT!!!!!!!');
       let origin = message.info.origin;
