@@ -134,9 +134,10 @@ function guardedCompare(tabId) {
         let newDataURI = result["current"];
         console.log(newDataURI);
         if (newDataURI !== null && newDataURI !== undefined) {
-          compare(oldDataURI, newDataURI);
+          compare(oldDataURI, newDataURI, tab.url);
+          console.log("Tab URL is " + tab.url);
           chrome.storage.local.set({[tabId]: newDataURI});
-          chrome.storage.local.set({current: null});
+          chrome.storagoe.local.set({current: null});
         }
       });
     };
@@ -161,7 +162,7 @@ function createCanvas(image, width, height) {
 }
 
 // Compare two images 
-function compareImages(image1, image2, width, height) {
+function compareImages(image1, image2, width, height, url) {
   // Create canvas for before and after images 
   const canvas1 = createCanvas(image1, width, height);
   const canvas2 = createCanvas(image2, width, height);
@@ -183,11 +184,11 @@ function compareImages(image1, image2, width, height) {
 
   // outputData contains the result from pixelmatch 
   // Output the difference 
-  showDifferences(canvas1, outputData);
+  showDifferences(canvas1, outputData, url);
 }
 
 // outputData is an ImageData, beforeCanvas is a canvas 
-function showDifferences(beforeCanvas, outputData) {
+function showDifferences(beforeCanvas, outputData, taburl) {
   let outputCanvas = document.createElement('canvas'); //  new HTMLCanvasElement();
   //outputCanvas.getContext('2d');
   outputCanvas.width = outputData.width;
@@ -203,7 +204,6 @@ function showDifferences(beforeCanvas, outputData) {
   // outputImage.appendChild(outputContext.canvas);
 
   if (pass === true) {
-
     chrome.notifications.create(notifyID, options);
     chrome.notifications.onButtonClicked.addListener((notifid, btnIdx) => {
       if (btnIdx === 0) {
@@ -234,6 +234,7 @@ function showDifferences(beforeCanvas, outputData) {
     
         popup.document.write("<img src='" + urlBefore + "' alt='from canvas'/>");
         popup.document.write("<img src='" + url + "' alt='from canvas'/>");
+        popup.document.title = "Differences for: " + taburl;
       }
       chrome.notifications.clear(notifyID);
     });
@@ -258,7 +259,7 @@ async function getDimensions(base64String) {
 }
 
 //Inputs are two binary64 strings
-function compare(string1, string2) {
+function compare(string1, string2, url) {
   console.log("compare.js called");
   console.log(string1);
   console.log(string2);
@@ -288,7 +289,7 @@ function compare(string1, string2) {
         console.log("Image different Dimensions. Can't put through pixelmatch")
       }
       else {
-        compareImages(image1, image2, img1W, img2H);
+        compareImages(image1, image2, img1W, img2H, url);
       }
     });
   }
