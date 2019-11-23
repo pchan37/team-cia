@@ -58,9 +58,26 @@ chrome.tabs.onActivated.addListener(activeInfo => {
       if (prevURL === currentURL) {
         console.log("put through pixelmatch");
         // retrieve old data URI
-      }
+        // If current URI exists, then get old and current URI
+        // Call compare(oldURI, newURI)
+        // Set [tabid] = dataURI to current 
+        // set current to undefined
+        chrome.storage.local.get(tabId.toString(), result1 => {
+          let oldDataURI = result1[tabId]
+          console.log("Old Data URI to Compare " + oldDataURI);
+          chrome.storage.local.get("current", result2 =>{
+            let newDataURI = result2.current;
+            console.log("New Data URI to Compare " + newDataURI);
+            if (newDataURI !== null || newDataURI !== undefined){
+              compare(oldDataURI, newDataURI);
+            }
+            // chrome.storage.local.set({[tabId]: newDataURI});
+            // chrome.storage.local.set({current: null});
+          });
+        });
+      };
     });
-  }
+  };
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
@@ -105,9 +122,9 @@ function captureTab() {
             chrome.storage.local.set({ current: dataURI });
           }
         });
-        chrome.storage.local.get('current', result => {
-          console.log(`the result is ${result.current}`);
-        });
+        // chrome.storage.local.get('current', result => {
+        //   console.log(`the result is ${result.current}`);
+        // });
       } else {
         console.log('datauri is undefined');
       }
@@ -149,27 +166,28 @@ function compareImages(image1, image2, width, height) {
 
   // Create new image data for the output 
   let outputData = new ImageData(canvas1.width, canvas2.height);
-
+ 
   pixelmatch(imageData1.data, imageData2.data, outputData.data,
     outputData.width, outputData.height,
     { threshold: 0.05, alpha: 0.7, includeAA: true });
 
   // outputData contains the result from pixelmatch 
   // Output the difference 
-  showDifferences(outputData);
+  showDifferences(canvas1, outputData);
 }
 
 // outputData is an ImageData, beforeCanvas is a canvas 
 function showDifferences(beforeCanvas, outputData) {
   let outputCanvas = document.createElement('canvas'); //  new HTMLCanvasElement();
+  //outputCanvas.getContext('2d');
   outputCanvas.width = outputData.width;
   outputCanvas.height = outputData.height;
-
+  //console.log(outputData.w);
   let outputContext = outputCanvas.getContext('2d');
   outputContext.putImageData(outputData, 0, 0);
 
   // Determine if the output passes threshold 
-  let pass = checkThreshold(ouputData);
+  let pass = checkThreshold(outputData);
   // Shows the image in the same window as the other images 
   // let outputImage = document.getElementById('outputImage');
   // outputImage.appendChild(outputContext.canvas);
@@ -184,19 +202,23 @@ function showDifferences(beforeCanvas, outputData) {
 
     // Display as a popup
     // if (document.getElementById) {
-    //     w = screen.availWidth;
-    //     h = screen.availHeight;
+    //     let w = screen.availWidth;
+    //     let h = screen.availHeight;
     // }  
+    //let screen = document.getElementById;
+    let w = screen.availWidth;
+    let h = screen.availHeight;
+    console.log("This is width: " + outputData.width);
+    console.log("This is height: " + outputData.height);
+    let popW = outputData.width, popH = outputData.height;
 
-    // let popW = outputData.width, popH = outputData.height;
+    let leftPos = (w-popW)/2;
+    let topPos = (h-popH)/2;
 
-    // let leftPos = (w-popW)/2;
-    // let topPos = (h-popH)/2;
-
-    // let popup = window.open('','popup','width=' + popW + ',height=' + popH + 
-    //                         ',top=' + topPos + ',left=' + leftPos + ',       scrollbars=yes');
-    // popup.document.write("<img src='"+ urlBefore +"' alt='from canvas'/>");
-    // popup.document.write("<img src='"+ url +"' alt='from canvas'/>");
+    let popup = window.open('','popup','width=' + popW + ',height=' + popH + 
+                            ',top=' + topPos + ',left=' + leftPos + ',       scrollbars=yes');
+    popup.document.write("<img src='"+ urlBefore +"' alt='from canvas'/>");
+    popup.document.write("<img src='"+ url +"' alt='from canvas'/>");
   }
 }
 
@@ -220,7 +242,9 @@ async function getDimensions(base64String) {
 //Inputs are two binary64 strings
 function compare(string1, string2) {
   console.log("compare.js called");
-  if (string1 !== string1) {
+  console.log(string1);
+  console.log(string2);
+  if (string1 !== string2) {
     console.log("Base64 is not equal. Checking Dimensions");
     let image1 = new Image();
     image1.src = string1;
@@ -228,19 +252,25 @@ function compare(string1, string2) {
     let image2 = new Image();
     image2.src = string2;
 
-    let result1 = getDimensions(base1);
-    let result2 = getDimensions(base2);
+    let result1 = getDimensions(string1);
+    let result2 = getDimensions(string2);
+
+    
     Promise.all([result1, result2]).then(function (values) {
       let img1W = (values[0]).w;
       let img1H = (values[0]).h;
       let img2W = (values[1]).w;
       let img2H = (values[1]).h;
+      console.log("Image1 width " + img1W);
+      console.log("Image1 height "+ img1H);
+      console.log("Image2 width " + img2W);
+      console.log("Image2 height "+ img2H);
       if ((img1W !== img2W) || (img1H !== img2H)) {
         // Handle in notification 
         console.log("Image different Dimensions. Can't put through pixelmatch")
       }
       else {
-        compareImages(image1, image2, img1W, img2G);
+        compareImages(image1, image2, img1W, img2H);
       }
     });
   }
