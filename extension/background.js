@@ -2,6 +2,8 @@
 
 let tabCount = 0; // for debugging purposes
 let captureCount = 0; // for debugging purposes
+let dummyBlacklist = new Set(['https://pchancs.com/']);
+
 let hasHandlerTracker = {};
 let prevURLTracker = {};
 
@@ -28,6 +30,16 @@ chrome.runtime.onConnect.addListener(port => {
           // do nothing
         }
       });
+    }
+    if (message.action === "Sending origin") {
+      console.log('ORIGIN WAS SENT!!!!!!!');
+      let origin = message.info.origin;
+      let tabId = message.info.tabId;
+      console.log(origin);
+      console.log(tabId);
+      if (!dummyBlacklist.has(origin)) {
+        // put through pixelmatch
+      }
     }
   });
   port.onDisconnect.addListener(port => {
@@ -57,24 +69,29 @@ chrome.tabs.onActivated.addListener(activeInfo => {
       console.log(`currentURL ${currentURL}`);
       if (prevURL === currentURL) {
         console.log("put through pixelmatch");
+        let port = chrome.tabs.connect(tabId);
+        port.postMessage({
+          action: 'Fetch origin',
+          tabId: tabId
+        });
         // retrieve old data URI
         // If current URI exists, then get old and current URI
         // Call compare(oldURI, newURI)
         // Set [tabid] = dataURI to current 
         // set current to undefined
-        chrome.storage.local.get(tabId.toString(), result1 => {
-          let oldDataURI = result1[tabId]
-          console.log("Old Data URI to Compare " + oldDataURI);
-          chrome.storage.local.get("current", result2 =>{
-            let newDataURI = result2.current;
-            console.log("New Data URI to Compare " + newDataURI);
-            if (newDataURI !== null || newDataURI !== undefined){
-              compare(oldDataURI, newDataURI);
-            }
-            // chrome.storage.local.set({[tabId]: newDataURI});
-            // chrome.storage.local.set({current: null});
-          });
-        });
+        // chrome.storage.local.get(tabId.toString(), result1 => {
+        //   let oldDataURI = result1[tabId];
+        //   console.log("Old Data URI to Compare " + oldDataURI);
+        //   chrome.storage.local.get("current", result2 => {
+        //     let newDataURI = result2.current;
+        //     console.log("New Data URI to Compare " + newDataURI);
+        //     if (newDataURI !== null || newDataURI !== undefined) {
+        //       compare(oldDataURI, newDataURI);
+        //     }
+        //     // chrome.storage.local.set({[tabId]: newDataURI});
+        //     // chrome.storage.local.set({current: null});
+        //   });
+        // });
       };
     });
   };
@@ -109,14 +126,12 @@ function captureTab() {
       return;
     }
     chrome.tabs.query({ currentWindow: true, active: true }, tabs => {
-      if (dataURI !== undefined) {
+      if (dataURI !== undefined || dataURI !== null) {
         let activeTabId = tabs[0].id.toString();
         chrome.storage.local.get([activeTabId], result => {
           if (result[activeTabId] === null || result[activeTabId] === undefined) {
             chrome.storage.local.set({ [activeTabId]: dataURI }, () => {
               console.log("set the data");
-              console.log(activeTabId);
-              console.log(dataURI);
             });
           } else {
             chrome.storage.local.set({ current: dataURI });
@@ -166,7 +181,7 @@ function compareImages(image1, image2, width, height) {
 
   // Create new image data for the output 
   let outputData = new ImageData(canvas1.width, canvas2.height);
- 
+
   pixelmatch(imageData1.data, imageData2.data, outputData.data,
     outputData.width, outputData.height,
     { threshold: 0.05, alpha: 0.7, includeAA: true });
@@ -212,13 +227,13 @@ function showDifferences(beforeCanvas, outputData) {
     console.log("This is height: " + outputData.height);
     let popW = outputData.width, popH = outputData.height;
 
-    let leftPos = (w-popW)/2;
-    let topPos = (h-popH)/2;
+    let leftPos = (w - popW) / 2;
+    let topPos = (h - popH) / 2;
 
-    let popup = window.open('','popup','width=' + popW + ',height=' + popH + 
-                            ',top=' + topPos + ',left=' + leftPos + ',       scrollbars=yes');
-    popup.document.write("<img src='"+ urlBefore +"' alt='from canvas'/>");
-    popup.document.write("<img src='"+ url +"' alt='from canvas'/>");
+    let popup = window.open('', 'popup', 'width=' + popW + ',height=' + popH +
+      ',top=' + topPos + ',left=' + leftPos + ',       scrollbars=yes');
+    popup.document.write("<img src='" + urlBefore + "' alt='from canvas'/>");
+    popup.document.write("<img src='" + url + "' alt='from canvas'/>");
   }
 }
 
@@ -255,16 +270,16 @@ function compare(string1, string2) {
     let result1 = getDimensions(string1);
     let result2 = getDimensions(string2);
 
-    
+
     Promise.all([result1, result2]).then(function (values) {
       let img1W = (values[0]).w;
       let img1H = (values[0]).h;
       let img2W = (values[1]).w;
       let img2H = (values[1]).h;
       console.log("Image1 width " + img1W);
-      console.log("Image1 height "+ img1H);
+      console.log("Image1 height " + img1H);
       console.log("Image2 width " + img2W);
-      console.log("Image2 height "+ img2H);
+      console.log("Image2 height " + img2H);
       if ((img1W !== img2W) || (img1H !== img2H)) {
         // Handle in notification 
         console.log("Image different Dimensions. Can't put through pixelmatch")

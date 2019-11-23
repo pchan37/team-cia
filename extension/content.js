@@ -13,13 +13,6 @@ function sendCaptureMsg() {
   });
 }
 
-function sendFocusMsg() {
-  console.log('in focus');
-  port.postMessage({
-    action: 'Check if same tab'
-  });
-}
-
 function sendBlurMsg() {
   console.log('out of focus');
   port.postMessage({
@@ -28,9 +21,20 @@ function sendBlurMsg() {
   });
 }
 
+function sendOrigin(origin, tabId) {
+  port.postMessage({
+    action: 'Sending origin',
+    info: {
+      origin: origin,
+      tabId: tabId
+    }
+  });
+}
+
 chrome.runtime.onConnect.addListener(port => {
   console.log('connected!');
   port.onMessage.addListener(message => {
+    console.log(message);
     if (message.action === 'Add event handlers') {
       console.log(`added event handlers ${++count}`);
       if (document.hasFocus()) {
@@ -38,10 +42,14 @@ chrome.runtime.onConnect.addListener(port => {
         sendCaptureMsg();
       }
       window.addEventListener('focus', sendCaptureMsg);
-      // window.addEventListener('focus', sendFocusMsg);
       console.log('gave focus listener sendcapturemsg');
       window.addEventListener('blur', sendBlurMsg);
       console.log('gave blur listener sendblurmsg');
+    }
+    if (message.action === 'Fetch origin') {
+      let origin = window.location.origin;
+      console.log(origin);
+      sendOrigin(origin, message.tabId);
     }
   });
   port.onDisconnect.addListener(port => {
