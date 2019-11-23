@@ -2,8 +2,6 @@
 
 console.log('from content.js!');
 
-let count = 0; // for debugging purposes
-
 const port = chrome.runtime.connect();
 
 function sendOrigin(origin, tabId) {
@@ -25,9 +23,5 @@ chrome.runtime.onConnect.addListener(port => {
       console.log(origin);
       sendOrigin(origin, message.tabId);
     }
-  });
-  port.onDisconnect.addListener(port => {
-    console.log(`port ${port} disconnected`);
-    console.log(port);
   });
 });

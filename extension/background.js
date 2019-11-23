@@ -37,19 +37,11 @@ chrome.runtime.onConnect.addListener(port => {
       let origin = message.info.origin;
       let tabId = message.info.tabId;
       console.log(origin);
-      console.log(tabId);
       if (!dummyBlacklist.has(origin)) {
         // put through pixelmatch
       }
     }
   });
-  port.onDisconnect.addListener(port => {
-    console.log(`port ${port} disconnected`);
-  });
-});
-
-chrome.tabs.onCreated.addListener(tab => {
-  console.log("tab created");
 });
 
 // This is reponsible for tab capturing when you switch between tabs.
@@ -66,7 +58,7 @@ chrome.tabs.onActivated.addListener(activeInfo => {
   chrome.storage.local.get([tabId], result => {
     if (result[tabId] !== null && result[tabId] !== undefined) {
       captureTabThenGuardedCompare();
-    } 
+    }
   });
 });
 
@@ -76,6 +68,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   let statusComplete = changeInfo.status === "complete" && tab.status === "complete";
   if (statusComplete && tab.active) {
     console.log("on updated triggered");
+    console.log('--------------------------');
     chrome.tabs.get(tabId, tab => {
       if (tab !== undefined) {
         if (prevURLTracker[tabId] !== tab.url) {
@@ -85,36 +78,39 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         captureTabThenGuardedCompare();
       }
     });
-    console.log(`done loading tab #${++tabCount}`);
   }
 });
 
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-  console.log("on removed triggered");
-  if (tabId in hasHandlerTracker) delete hasHandlerTracker[tabId];
-  if (tabId in prevURLTracker) delete prevURLTracker[tabId];
-  console.log(`removed tab#${tabId} from dictionaries`);
+  if (tabId in hasHandlerTracker)
+    delete hasHandlerTracker[tabId];
+  if (tabId in prevURLTracker)
+    delete prevURLTracker[tabId];
 });
 
 function captureTabThenGuardedCompare() {
   chrome.tabs.captureVisibleTab(chrome.windows.WINDOW_ID_CURRENT, { format: "png" }, dataURI => {
     console.log("capturing visible tab");
     if (chrome.runtime.lastError) {
+      console.log('runtime err');
+      console.log('-------------------');
       return;
     }
     chrome.tabs.query({ currentWindow: true, active: true }, tabs => {
       if (dataURI !== undefined && dataURI !== null) {
         let activeTabId = tabs[0].id.toString();
         chrome.storage.local.get([activeTabId], result => {
-          console.log(`This is what's found ${result[activeTabId]}`);
+          if (result[activeTabId] !== undefined && result[activeTabId] !== null) {
+            console.log("found data with that tab id already");
+          }
           if (result[activeTabId] === null || result[activeTabId] === undefined) {
             chrome.storage.local.set({ [activeTabId]: dataURI }, () => {
               console.log("set the data for the first time");
             });
           } else {
-              chrome.storage.local.set({ current: dataURI }, () => {
-                  guardedCompare(tabs[0].id);
-              });
+            chrome.storage.local.set({ current: dataURI }, () => {
+              guardedCompare(tabs[0].id);
+            });
           }
         });
       } else {
@@ -140,7 +136,7 @@ function guardedCompare(tabId) {
       chrome.storage.local.get([tabId.toString(), "current"], result => {
         let oldDataURI = result[tabId];
         let newDataURI = result["current"];
-        console.log(newDataURI);
+        console.log('new datauri');
         if (newDataURI !== null && newDataURI !== undefined) {
           compare(oldDataURI, newDataURI, tab.url);
           console.log("Tab URL is " + tab.url);
@@ -218,7 +214,7 @@ function showDifferences(beforeCanvas, outputData, taburl) {
         // Displays difference in new tab 
         let url = outputCanvas.toDataURL("image/png"); // src of the output image 
         let urlBefore = beforeCanvas.toDataURL("beforeImage/png");
-       
+
         let screen = document.getElementById;
         let w = screen.availWidth;
         let h = screen.availHeight;
@@ -234,12 +230,12 @@ function showDifferences(beforeCanvas, outputData, taburl) {
 
         let beforeElement = popup.document.getElementById('beforeCanvas');
         let outputElemenet = popup.document.getElementById('outputImage');
-        if (beforeElement !== null){
+        if (beforeElement !== null) {
           //Remove if there is already data in the window
           beforeElement.parentNode.removeChild(beforeElement);
           outputElemenet.parentNode.removeChild(outputElemenet);
         }
-        console.log("Pop up");
+
         popup.document.write("<img src='" + urlBefore + "' alt='from canvas'/>");
         popup.document.write("<img src='" + url + "' alt='from canvas'/>");
         popup.document.title = "Differences for: " + taburl;
@@ -269,8 +265,8 @@ async function getDimensions(base64String) {
 //Inputs are two binary64 strings
 function compare(string1, string2, url) {
   console.log("compare.js called");
-  console.log(string1);
-  console.log(string2);
+  // console.log(string1);
+  // console.log(string2);
   if (string1 !== string2) {
     console.log("Base64 is not equal. Checking Dimensions");
     let image1 = new Image();
@@ -288,10 +284,10 @@ function compare(string1, string2, url) {
       let img1H = (values[0]).h;
       let img2W = (values[1]).w;
       let img2H = (values[1]).h;
-      console.log("Image1 width " + img1W);
-      console.log("Image1 height " + img1H);
-      console.log("Image2 width " + img2W);
-      console.log("Image2 height " + img2H);
+      // console.log("Image1 width " + img1W);
+      // console.log("Image1 height " + img1H);
+      // console.log("Image2 width " + img2W);
+      // console.log("Image2 height " + img2H);
       if ((img1W !== img2W) || (img1H !== img2H)) {
         // Handle in notification 
         chrome.notifications.create(warningID, warningOptions);
