@@ -211,16 +211,34 @@ function showDifferences(beforeCanvas, outputData, taburl) {
     chrome.notifications.create(notifyID, options);
     chrome.notifications.onButtonClicked.addListener((notifid, btnIdx) => {
       if (btnIdx === 0) {
-        // Displays difference in new tab 
-        let url = outputCanvas.toDataURL("image/png"); // src of the output image 
-        let urlBefore = beforeCanvas.toDataURL("beforeImage/png");
 
+        // Rescale before image 
+        let width = beforeCanvas.width;
+        let height = beforeCanvas.height;
+        let tempCanvas = document.createElement('canvas');
+        tempCanvas.width = width * 0.45;
+        tempCanvas.height = height * 0.45;
+        let tempContext = tempCanvas.getContext('2d');
+        tempContext.drawImage(beforeCanvas, 0, 0, width, height, 0, 0, width*0.45, height*0.45);
+        
+        // Rescale output Image 
+        let rescaleOutputCanvas = document.createElement('canvas');
+        rescaleOutputCanvas.width = width* 0.45;
+        rescaleOutputCanvas.height = height * 0.45;
+        let rescaleOutputContext = rescaleOutputCanvas.getContext('2d');
+        rescaleOutputContext.drawImage(outputCanvas, 0, 0, width, height, 0, 0, width* 0.45, height * 0.45);
+
+        let url = rescaleOutputCanvas.toDataURL("image/png"); // src of the output image 
+        let urlBefore = tempCanvas.toDataURL("beforeImage/png");
+
+        // Displays difference in new tab 
         let screen = document.getElementById;
         let w = screen.availWidth;
         let h = screen.availHeight;
-        console.log("This is width: " + outputData.width);
-        console.log("This is height: " + outputData.height);
-        let popW = outputData.width, popH = outputData.height;
+        console.log("This is width: " + w);
+        console.log("This is height: " + h);
+        
+        let popW =  tempCanvas.width * 1.2, popH = tempCanvas.height * 1.2;
 
         let leftPos = (w - popW) / 2;
         let topPos = (h - popH) / 2;
@@ -230,15 +248,21 @@ function showDifferences(beforeCanvas, outputData, taburl) {
 
         let beforeElement = popup.document.getElementById('beforeCanvas');
         let outputElemenet = popup.document.getElementById('outputImage');
+        let beforeText = popup.document.getElementById('before_text');
+        let outputText = popup.document.getElementById('output_text');
         console.log("This is the before canvas " + beforeElement);
         if (beforeElement !== null) {
           //Remove if there is already data in the window
           beforeElement.parentNode.removeChild(beforeElement);
           outputElemenet.parentNode.removeChild(outputElemenet);
+          beforeText.parentNode.removeChild(beforeText);
+          outputText.parentNode.removeChild(outputText);
         }
-
+        popup.document.write("<h1 id='before_text'> The below image is the screenshot of your page before you left your tab <br></h1>");
         popup.document.write("<img id='beforeCanvas' src='" + urlBefore + "' alt='from canvas'/>");
+        popup.document.write("<h1 id='output_text'> <br>The below image is the difference between when you left and you came back to your tab. Any red area indicates deviations from the previous image<br></h1>");
         popup.document.write("<img id='outputImage' src='" + url + "' alt='from canvas'/>");
+
         popup.document.title = "Differences for: " + taburl;
       }
       chrome.notifications.clear(notifyID);
