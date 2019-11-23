@@ -234,12 +234,12 @@ function showDifferences(beforeCanvas, outputData, taburl) {
 
         let beforeElement = popup.document.getElementById('beforeCanvas');
         let outputElemenet = popup.document.getElementById('outputImage');
-        if (beforeElement !== null || outputElement != null){
+        if (beforeElement !== null){
           //Remove if there is already data in the window
           beforeElement.parentNode.removeChild(beforeElement);
           outputElemenet.parentNode.removeChild(outputElemenet);
         }
-    
+        console.log("Pop up");
         popup.document.write("<img src='" + urlBefore + "' alt='from canvas'/>");
         popup.document.write("<img src='" + url + "' alt='from canvas'/>");
         popup.document.title = "Differences for: " + taburl;
