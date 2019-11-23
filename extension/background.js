@@ -20,6 +20,14 @@ const options = {
   }]
 };
 
+const warningID = "Warning";
+const warningOptions = {
+  type: "basic",
+  iconUrl: "warning.png",
+  title: "Incompatible Window Sizes!",
+  message: "Different window sizes, unable to detect any changes"
+};
+
 chrome.runtime.onConnect.addListener(port => {
   console.log("connected!");
   port.onMessage.addListener((message, messageSender) => {
@@ -286,6 +294,7 @@ function compare(string1, string2, url) {
       console.log("Image2 height " + img2H);
       if ((img1W !== img2W) || (img1H !== img2H)) {
         // Handle in notification 
+        chrome.notifications.create(warningID, warningOptions);
         console.log("Image different Dimensions. Can't put through pixelmatch")
       }
       else {
