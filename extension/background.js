@@ -44,9 +44,16 @@ chrome.tabs.onCreated.addListener(tab => {
   console.log("tab created");
 });
 
+// This is reponsible for tab capturing when you switch between tabs.
+// It is also responsible for saving the tab url when you open the tab.
 chrome.tabs.onActivated.addListener(activeInfo => {
   console.log("on activated triggered");
   let { tabId } = activeInfo;
+  chrome.tabs.get(tabId, tab => {
+    if (tab !== undefined) {
+      prevURLTracker[tabId] = tab.url;
+    }
+  });
   tabId = tabId.toString();
   chrome.storage.local.get([tabId], result => {
     if (result[tabId] !== null && result[tabId] !== undefined) {
@@ -55,13 +62,18 @@ chrome.tabs.onActivated.addListener(activeInfo => {
   });
 });
 
+// This is responsible for tab capturing when you open up a new tab or
+// when the url of the tab has changed.
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   let statusComplete = changeInfo.status === "complete" && tab.status === "complete";
   if (statusComplete && tab.active) {
     console.log("on updated triggered");
     chrome.tabs.get(tabId, tab => {
-      if (tab !== undefined && prevURLTracker[tabId] !== tab.url) {
-        prevURLTracker[tabId] = tab.url;
+      if (tab !== undefined) {
+        if (prevURLTracker[tabId] !== tab.url) {
+          prevURLTracker[tabId] = tab.url;
+          chrome.storage.local.set({ [tabId.toString()]: null });
+        }
         captureTabThenGuardedCompare();
       }
     });
