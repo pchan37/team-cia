@@ -43,6 +43,8 @@ chrome.runtime.onConnect.addListener(port => {
     }
     if (message.action === 'Capture tab') {
       console.log('been told to capture tab!!!!');
+      const tabId = message.info.tabId;
+      chrome.storage.local.set({ [tabId.toString()]: null });
       captureTabThenGuardedCompare();
     }
   });
