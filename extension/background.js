@@ -187,6 +187,7 @@ function compareImages(image1, image2, width, height, url) {
   showDifferences(canvas1, outputData, url);
 }
 
+
 // outputData is an ImageData, beforeCanvas is a canvas 
 function showDifferences(beforeCanvas, outputData, taburl) {
   let outputCanvas = document.createElement('canvas'); //  new HTMLCanvasElement();
@@ -232,6 +233,8 @@ function showDifferences(beforeCanvas, outputData, taburl) {
         let outputElemenet = popup.document.getElementById('outputImage');
         let beforeText = popup.document.getElementById('before_text');
         let outputText = popup.document.getElementById('output_text');
+        let afterText = popup.document.getElementById('after_text');
+        let yesbutton = popup.document.getElementById('yesbutton');
         //console.log("This is the before canvas " + beforeElement);
 
         // Remove all contents that are currently in the window 
@@ -240,6 +243,8 @@ function showDifferences(beforeCanvas, outputData, taburl) {
           outputElemenet.parentNode.removeChild(outputElemenet);
           beforeText.parentNode.removeChild(beforeText);
           outputText.parentNode.removeChild(outputText);
+          afterText.parentNode.removeChild(afterText);
+        
         }
 
         // Insert all contents into the window 
@@ -248,11 +253,21 @@ function showDifferences(beforeCanvas, outputData, taburl) {
         popup.document.write("<h1 id='output_text'> <br>The below image is the difference between when you left and you came back to your tab. Any red area indicates deviations from the previous image<br></h1>");
         popup.document.write("<img id='outputImage' src='" + url + "' alt='from canvas'/>");
         popup.document.title = "Differences for: " + taburl;
+        popup.document.write("<h1 id = 'after_text'> <br>Would you like to add this site to the blacklist?<br></h1>");
+        popup.document.write("<button style='margin-right:10px;' onclick='gotoreserve()'>Yes</button>");
+        popup.document.write("<button id='bttn'>No</button>");
+        let btns = popup.document.getElementById("bttn");
+        btns.addEventListener("click",function(){
+          popup.window.close();
+      }, false);
+  
       }
       chrome.notifications.clear(notifyID);
     });
   }
 }
+
+
 
 // This will always return true for now 
 function checkThreshold(outputData) {
