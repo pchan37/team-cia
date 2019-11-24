@@ -32,15 +32,6 @@ chrome.runtime.onConnect.addListener(port => {
   console.log("connected!");
   port.onMessage.addListener((message, messageSender) => {
     console.log(message);
-    if (message.action === "Sending origin") {
-      console.log('ORIGIN WAS SENT!!!!!!!');
-      let origin = message.info.origin;
-      let tabId = message.info.tabId;
-      console.log(origin);
-      if (!dummyBlacklist.has(origin)) {
-        // put through pixelmatch
-      }
-    }
     if (message.action === 'Capture tab') {
       console.log('been told to capture tab!!!!');
       const tabId = message.info.tabId;
@@ -142,10 +133,6 @@ function guardedCompare(tabId) {
     if (prevURL === currentURL) {
       console.log("put through pixelmatch");
       let port = chrome.tabs.connect(tabId);
-      port.postMessage({
-        action: 'Fetch origin',
-        tabId: tabId
-      });
       chrome.storage.local.get([tabId.toString(), "current"], result => {
         let oldDataURI = result[tabId];
         let newDataURI = result["current"];
