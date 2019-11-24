@@ -109,6 +109,9 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
 
 function captureTabThenGuardedCompare() {
   chrome.tabs.captureVisibleTab(chrome.windows.WINDOW_ID_CURRENT, { format: 'png' }, dataURI => {
+    // This is not actually something to worry about.  We don't want the extension to error on restricted
+    // domains as you would need the activeTab permission (which involves getting the user to click on your
+    // extension).
     if (chrome.runtime.lastError) {
       return;
     }
