@@ -267,15 +267,11 @@ function showDifferences(beforeCanvas, outputData, taburl, tabId) {
         let yesbutton = popup.document.getElementById('yesbutton');
         //console.log("This is the before canvas " + beforeElement);
 
-        // Remove all contents that are currently in the window 
-        if (beforeElement !== null) {
-          beforeElement.parentNode.removeChild(beforeElement);
-          outputElemenet.parentNode.removeChild(outputElemenet);
-          beforeText.parentNode.removeChild(beforeText);
-          outputText.parentNode.removeChild(outputText);
-          afterText.parentNode.removeChild(afterText);
-
-        }
+	// Clear the children in the window
+	const body = document.querySelector('body')
+	while (body.children.length != 0) {
+	  body.removeChild(body.firstChild);
+	}
 
         // Insert all contents into the window 
         popup.document.write("<h1 id='before_text'> The below image is the screenshot of your page before you left your tab <br></h1>");
