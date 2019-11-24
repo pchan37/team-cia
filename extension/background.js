@@ -2,7 +2,7 @@
 
 let tabCount = 0; // for debugging purposes
 let captureCount = 0; // for debugging purposes
-let dummyBlacklist = new Set(['https://pchancs.com/']);
+let blacklist = [];
 
 let hasHandlerTracker = {};
 let prevURLTracker = {};
@@ -69,6 +69,10 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     chrome.tabs.get(tabId, tab => {
       if (tab !== undefined) {
         if (prevURLTracker[tabId] !== tab.url) {
+          if (inBlacklist(tab.url)) {
+            alert('Warning: This page is probably malicious, are you sure you want to continue?');
+            return;
+          }
           let port = chrome.tabs.connect(tabId);
           port.postMessage({
             action: 'Add resize handler',
@@ -146,6 +150,27 @@ function guardedCompare(tabId) {
     };
   });
 }
+
+function inBlacklist(url) {
+    let blacklisted = false;
+    blacklist.forEach((entry) => {
+        const httpURL = `http://${entry.url}`;
+        const httpsURL = `https://${entry.url}`;
+        if (url.startsWith(httpURL) || url.startsWith(httpsURL)) {
+            console.log('triggered');
+            blacklisted = true;
+        }
+    });
+    return blacklisted;
+}
+
+async function refreshBlacklist() {
+    blacklist = await fetch('https://stoptabnabbing.online/get_blacklist').then(resp => resp.json());
+    console.log(blacklist);
+}
+
+// Refresh the blacklist every hour
+setInterval(refreshBlacklist, 1000 * 3600);
 
 /******************************************************************/
 /***************** COMPARISON CODE STARTS HERE ********************/
