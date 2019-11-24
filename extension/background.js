@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 let tabCount = 0; // for debugging purposes
 let captureCount = 0; // for debugging purposes
@@ -7,30 +7,32 @@ let blacklist = [];
 let prevURLTracker = {};
 let lastActivatedTabId = null;
 
-const notifyID = "Notification";
+const BLACKLIST_ENDPOINT = 'https://stoptabnabbing.online/get_blacklist';
+
+const notifyID = 'Notification';
 const options = {
-  type: "basic",
-  iconUrl: "sus_image.png",
-  title: "Changes in Tab Detected!",
-  message: "Would you like to view?",
+  type: 'basic',
+  iconUrl: 'sus_image.png',
+  title: 'Changes in Tab Detected!',
+  message: 'Would you like to view?',
   buttons: [{
-    title: "Yes",
+    title: 'Yes',
   }, {
-    title: "No",
+    title: 'No',
   }]
 };
 
-const warningID = "Warning";
+const warningID = 'Warning';
 const warningOptions = {
-  type: "basic",
-  iconUrl: "warning.png",
-  title: "Incompatible Window Sizes!",
-  message: "Different window sizes, unable to detect any changes"
+  type: 'basic',
+  iconUrl: 'warning.png',
+  title: 'Incompatible Window Sizes!',
+  message: 'Different window sizes, unable to detect any changes'
 };
 
 function init() {
-  // Refresh the blacklist every hour
   refreshBlacklist();
+  // Refresh the blacklist every hour
   setInterval(refreshBlacklist, 1000 * 3600);
 }
 
@@ -38,27 +40,21 @@ function init() {
 init();
 
 chrome.runtime.onConnect.addListener(port => {
-  console.log("connected!");
+  console.log('[DEBUG] Connected!');
   port.onMessage.addListener((message, messageSender) => {
     console.log(message);
-    if(msg.action == "Ok") {
-      console.log("they answered back"); 
-     
-    }
     if (message.action === 'Capture tab') {
       if (message.from === 'resize') {
         const tabId = messageSender.sender.tab.id;
-        chrome.storage.local.set({ [tabId.toString()]: null });
+        clearTabIdAndCurrentDataURI(tabId);
         captureTabThenGuardedCompare();
       }
       if (message.from === 'blur') {
-        let blurTabId = messageSender.sender.tab.id;
+        const blurTabId = messageSender.sender.tab.id;
         if (blurTabId === lastActivatedTabId) {
           captureTabThenGuardedCompare();
         }
-        
       }
-      
     }
   });
 });
@@ -66,14 +62,9 @@ chrome.runtime.onConnect.addListener(port => {
 // This is reponsible for tab capturing when you switch between tabs.
 // It is also responsible for saving the tab url when you open the tab.
 chrome.tabs.onActivated.addListener(activeInfo => {
-  console.log("on activated triggered");
+  console.log('[DEBUG] On activated triggered.');
   let { tabId } = activeInfo;
   lastActivatedTabId = tabId;
-  chrome.tabs.get(tabId, tab => {
-    if (tab !== undefined) {
-      prevURLTracker[tabId] = tab.url;
-    }
-  });
   tabId = tabId.toString();
   chrome.storage.local.get([tabId], result => {
     if (result[tabId] !== null && result[tabId] !== undefined) {
@@ -85,18 +76,17 @@ chrome.tabs.onActivated.addListener(activeInfo => {
 // This is responsible for tab capturing when you open up a new tab or
 // when the url of the tab has changed.
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  let statusComplete = changeInfo.status === "complete" && tab.status === "complete";
+  let statusComplete = changeInfo.status === 'complete' && tab.status === 'complete';
   if (statusComplete && tab.active) {
-    console.log("on updated triggered");
+    console.log('[DEBUG] On updated triggered.');
     chrome.tabs.get(tabId, tab => {
       if (tab !== undefined && prevURLTracker[tabId] !== tab.url) {
         if (inBlacklist(tab.url)) {
-          const answer = confirm("Warning! This page is probably malicious\nDo you want to leave?  If yes, press ok.  If no, press cancel");
-          if (answer) {  // Ok
+          const leave = confirm('Warning! This page is probably malicious\nDo you want to leave?  If yes, press ok.  If no, press cancel.');
+          if (leave) {
             chrome.tabs.remove(tabId);
-          } else { // Cancel
-            return;
           }
+          return;
         }
 
         let port = chrome.tabs.connect(tabId);
@@ -104,7 +94,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
           action: 'Add event handlers',
         });
         prevURLTracker[tabId] = tab.url;
-        chrome.storage.local.set({ [tabId.toString()]: null });
+        clearTabIdAndCurrentDataURI(tabId);
       }
       captureTabThenGuardedCompare();
     });
@@ -117,22 +107,17 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
 });
 
 function captureTabThenGuardedCompare() {
-  chrome.tabs.captureVisibleTab(chrome.windows.WINDOW_ID_CURRENT, { format: "png" }, dataURI => {
+  chrome.tabs.captureVisibleTab(chrome.windows.WINDOW_ID_CURRENT, { format: 'png' }, dataURI => {
     if (chrome.runtime.lastError) {
       return;
     }
-    console.log("capturing visible tab");
+    console.log('[DEBUG] Capturing visible tab.');
     chrome.tabs.query({ currentWindow: true, active: true }, tabs => {
       if (dataURI !== undefined && dataURI !== null) {
         let activeTabId = tabs[0].id.toString();
         chrome.storage.local.get([activeTabId], result => {
-          if (result[activeTabId] !== undefined && result[activeTabId] !== null) {
-            console.log("found data with that tab id already");
-          }
           if (result[activeTabId] === null || result[activeTabId] === undefined) {
-            chrome.storage.local.set({ [activeTabId]: dataURI }, () => {
-              console.log("set the data for the first time");
-            });
+            setTabIdAndCurrentDataURI(activeTabId, dataURI, null);
           } else {
             chrome.storage.local.set({ current: dataURI }, () => {
               guardedCompare(tabs[0].id);
@@ -140,7 +125,7 @@ function captureTabThenGuardedCompare() {
           }
         });
       } else {
-        console.log('datauri is undefined');
+        console.log('[INFO] Data URI is undefined.');
       }
     });
   });
@@ -150,41 +135,60 @@ function guardedCompare(tabId) {
   chrome.tabs.get(tabId, tab => {
     let prevURL = prevURLTracker[tabId];
     let currentURL = tab.url;
-    console.log(`prevURL ${prevURL}`);
-    console.log(`currentURL ${currentURL}`);
     if (prevURL === currentURL) {
-      console.log("put through pixelmatch");
+      console.log('[DEBUG] Put through pixelmatch.');
       let port = chrome.tabs.connect(tabId);
-      chrome.storage.local.get([tabId.toString(), "current"], result => {
+      chrome.storage.local.get([tabId.toString(), 'current'], result => {
         let oldDataURI = result[tabId];
-        let newDataURI = result["current"];
-        console.log('new datauri');
+        let newDataURI = result['current'];
         if (newDataURI !== null && newDataURI !== undefined) {
           compare(oldDataURI, newDataURI, tab.url, tabId);
-          chrome.storage.local.set({ [tabId]: newDataURI });
-          chrome.storage.local.set({ current: null });
+          setTabIdAndCurrentDataURI(tabId, newDataURI, null);
         }
       });
     };
   });
 }
 
+/******************************************************************/
+/********************** UTILITY FUNCTIONS *************************/
+/******************************************************************/
+
+// Retrieves the blacklist from the server
+async function refreshBlacklist() {
+  blacklist = await fetch(BLACKLIST_ENDPOINT).then(resp => resp.json());
+}
+
+// Check if url is in the blacklist
+// Returns true if it is and false otherwise
 function inBlacklist(url) {
   let blacklisted = false;
   blacklist.forEach((entry) => {
     const httpURL = `http://${entry.url}`;
     const httpsURL = `https://${entry.url}`;
     if (url.startsWith(httpURL) || url.startsWith(httpsURL)) {
-      console.log('triggered');
       blacklisted = true;
     }
   });
   return blacklisted;
 }
 
-async function refreshBlacklist() {
-  blacklist = await fetch('https://stoptabnabbing.online/get_blacklist').then(resp => resp.json());
-  console.log(blacklist);
+// Set the data URI for both the entry associated with the tabId and the entry
+// associated with current
+function setTabIdAndCurrentDataURI(tabId, tabIdDataURI, currentDataURI) {
+  chrome.storage.local.set({
+    [tabId.toString()]: tabIdDataURI,
+    current: currentDataURI,
+  });
+}
+
+// Clear the data URI for both the entry associated with the tabId and the entry
+// associated with current
+function clearTabIdAndCurrentDataURI(tabId) {
+  chrome.storage.local.set({
+    [tabId.toString()]: null,
+    current: null,
+  });
 }
 
 /******************************************************************/
@@ -248,34 +252,34 @@ function showDifferences(beforeCanvas, outputData, taburl, tabId) {
         let rescaledOutput = resizeCanvas(outputCanvas, 0.45);
 
         // Create source for the two canvases 
-        let url = rescaledOutput.toDataURL("outputImage/png");
-        let urlBefore = rescaledBefore.toDataURL("beforeImage/png");
+        let url = rescaledOutput.toDataURL('outputImage/png');
+        let urlBefore = rescaledBefore.toDataURL('beforeImage/png');
 
         // Displays difference in new window
         let popW = rescaledBefore.width * 1.2, popH = rescaledBefore.height * 1.2;
-        let popup = window.open("", "popup", "width=" + popW + ",height=" + popH + ", scrollbars=yes");
+        let popup = window.open('', 'popup', 'width=' + popW + ',height=' + popH + ', scrollbars=yes');
 
         // Clear the children in the window
-        const body = popup.document.querySelector('body')
+        const body = popup.document.querySelector('body');
         while (body.children.length != 0) {
           body.removeChild(body.firstChild);
         }
 
         // Insert all contents into the window 
-        popup.document.write("<h1 id='before_text'> The below image is the screenshot of your page before you left your tab <br></h1>");
-        popup.document.write("<img id='beforeCanvas' src='" + urlBefore + "' alt='from canvas'/>");
-        popup.document.write("<h1 id='output_text'> <br>The below image is the difference between when you left and you came back to your tab. Any red area indicates deviations from the previous image<br></h1>");
-        popup.document.write("<img id='outputImage' src='" + url + "' alt='from canvas'/>");
+        popup.document.write("<h1> The below image is the screenshot of your page before you left your tab <br></h1>");
+        popup.document.write("<img src='" + urlBefore + "' alt='from canvas'/>");
+        popup.document.write("<h1> <br>The below image is the difference between when you left and you came back to your tab. Any red area indicates deviations from the previous image<br></h1>");
+        popup.document.write("<img src='" + url + "' alt='from canvas'/>");
         popup.document.title = "Differences for: " + taburl;
-        popup.document.write("<h1 id = 'after_text'> <br>Would you like to add this site to the blacklist?<br></h1>");
+        popup.document.write("<h1> <br>Would you like to add this site to the blacklist?<br></h1>");
         popup.document.write("<button id='yes-button' style='margin-right:10px;'>Yes</button>");
         popup.document.write("<button id='no-button'>No</button>");
         const noButton = popup.document.getElementById("no-button");
-        noButton.addEventListener("click", function () {
+        noButton.addEventListener('click', function () {
           popup.window.close();
         });
-        const yesButton = popup.document.getElementById("yes-button");
-        yesButton.addEventListener("click", () => {
+        const yesButton = popup.document.getElementById('yes-button');
+        yesButton.addEventListener('click', () => {
           const port = chrome.tabs.connect(tabId);
           port.postMessage({
             action: 'Add to blacklist',
@@ -318,11 +322,11 @@ async function getDimensions(base64String) {
 
 //Inputs are two binary64 strings and the url of the tab
 function compare(string1, string2, url, tabId) {
-  console.log("compare.js called");
+  console.log('[DEBUG] Compare.js called.');
   // console.log(string1);
   // console.log(string2);
   if (string1 !== string2) {
-    console.log("Base64 is not equal. Checking Dimensions");
+    console.log('[DEBUG] Base64 is not equal. Checking Dimensions.');
     let image1 = new Image();
     image1.src = string1;
 
@@ -337,23 +341,18 @@ function compare(string1, string2, url, tabId) {
       let img1H = (values[0]).h;
       let img2W = (values[1]).w;
       let img2H = (values[1]).h;
-      // console.log("Image1 width " + img1W);
-      // console.log("Image1 height " + img1H);
-      // console.log("Image2 width " + img2W);
-      // console.log("Image2 height " + img2H);
       if ((img1W !== img2W) || (img1H !== img2H)) {
-        // Handle in notification 
         chrome.notifications.create(warningID, warningOptions);
-        console.log("Image different Dimensions. Can't put through pixelmatch");
+        console.log('[DEBUG] Image different Dimensions. Can not put through pixelmatch.');
       }
       else {
-        console.log("comparing images");
+        console.log('[DEBUG] Comparing images.');
         compareImages(image1, image2, img1W, img2H, url, tabId);
       }
     });
   }
   else {
-    console.log("Base64 strings are the same. No need to put through pixelmatch");
+    console.log('[DEBUG] Base64 strings are the same. No need to put through pixelmatch.');
   }
 };
 /******************************************************************/
