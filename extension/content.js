@@ -15,7 +15,7 @@ function sendCaptureMsg(tabId) {
 
 async function addToBlacklist() {
   const url = window.location.host;
-  
+
   const params = new URLSearchParams();
   params.append('url', url);
 
@@ -23,7 +23,7 @@ async function addToBlacklist() {
     method: 'post',
     body: params,
   });
-    
+
 }
 
 chrome.runtime.onConnect.addListener(port => {
@@ -33,8 +33,6 @@ chrome.runtime.onConnect.addListener(port => {
     if (message.action === 'Add resize handler') {
       console.log('resize handler');
       window.addEventListener('resize', () => {
-        console.log('resize says that tabid is');
-        console.log(message.info.tabId);
         sendCaptureMsg(message.info.tabId);
       });
     };

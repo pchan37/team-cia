@@ -241,21 +241,21 @@ function showDifferences(beforeCanvas, outputData, taburl, tabId) {
         tempCanvas.width = width * 0.45;
         tempCanvas.height = height * 0.45;
         let tempContext = tempCanvas.getContext('2d');
-        tempContext.drawImage(beforeCanvas, 0, 0, width, height, 0, 0, width*0.45, height*0.45);
-        
+        tempContext.drawImage(beforeCanvas, 0, 0, width, height, 0, 0, width * 0.45, height * 0.45);
+
         // Rescale output Canvas
         let rescaleOutputCanvas = document.createElement('canvas');
-        rescaleOutputCanvas.width = width* 0.45;
+        rescaleOutputCanvas.width = width * 0.45;
         rescaleOutputCanvas.height = height * 0.45;
         let rescaleOutputContext = rescaleOutputCanvas.getContext('2d');
-        rescaleOutputContext.drawImage(outputCanvas, 0, 0, width, height, 0, 0, width* 0.45, height * 0.45);
+        rescaleOutputContext.drawImage(outputCanvas, 0, 0, width, height, 0, 0, width * 0.45, height * 0.45);
 
         // Create source for the two canvases 
         let url = rescaleOutputCanvas.toDataURL("outputImage/png");
         let urlBefore = tempCanvas.toDataURL("beforeImage/png");
 
         // Displays difference in new window
-        let popW =  tempCanvas.width * 1.2, popH = tempCanvas.height * 1.2;
+        let popW = tempCanvas.width * 1.2, popH = tempCanvas.height * 1.2;
         let popup = window.open("", "popup", "width=" + popW + ",height=" + popH + ", scrollbars=yes");
 
         // Get elements within the popup 
@@ -274,7 +274,7 @@ function showDifferences(beforeCanvas, outputData, taburl, tabId) {
           beforeText.parentNode.removeChild(beforeText);
           outputText.parentNode.removeChild(outputText);
           afterText.parentNode.removeChild(afterText);
-        
+
         }
 
         // Insert all contents into the window 
@@ -287,10 +287,10 @@ function showDifferences(beforeCanvas, outputData, taburl, tabId) {
         popup.document.write("<button id='yes-button' style='margin-right:10px;'>Yes</button>");
         popup.document.write("<button id='no-button'>No</button>");
         const noButton = popup.document.getElementById("no-button");
-        noButton.addEventListener("click",function(){
+        noButton.addEventListener("click", function () {
           popup.window.close();
         });
-        const yesButton = popup.document.getElementById("yes-button"); 
+        const yesButton = popup.document.getElementById("yes-button");
         yesButton.addEventListener("click", () => {
           const port = chrome.tabs.connect(tabId);
           port.postMessage({
