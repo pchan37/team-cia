@@ -41,6 +41,10 @@ chrome.runtime.onConnect.addListener(port => {
   console.log("connected!");
   port.onMessage.addListener((message, messageSender) => {
     console.log(message);
+    if(msg.action == "Ok") {
+      console.log("they answered back"); 
+     
+    }
     if (message.action === 'Capture tab') {
       if (message.from === 'resize') {
         const tabId = messageSender.sender.tab.id;
@@ -52,7 +56,9 @@ chrome.runtime.onConnect.addListener(port => {
         if (blurTabId === lastActivatedTabId) {
           captureTabThenGuardedCompare();
         }
+        
       }
+      
     }
   });
 });
@@ -83,37 +89,24 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (statusComplete && tab.active) {
     console.log("on updated triggered");
     chrome.tabs.get(tabId, tab => {
-      if (tab !== undefined) {
-        if (prevURLTracker[tabId] !== tab.url) {
-          if (inBlacklist(tab.url)) {
-            //over here
-            var answer;
-            answer = confirm("Warning! This page is probably malicious\nDo you want to leave?  If yes, press ok.  If no, press cancel");
-            if (answer === true) {  //Ok
-              $('#close_window').on('click', function(){
-                //window.opener = self;
-                //window.close();
-                //chrome.window.remove(tabId);
-             });
-              
-              alert("this didn't work");
-            
-              
-            }
-            else { //Cancel
-              return;
-            }
+      if (tab !== undefined && prevURLTracker[tabId] !== tab.url) {
+        if (inBlacklist(tab.url)) {
+          const answer = confirm("Warning! This page is probably malicious\nDo you want to leave?  If yes, press ok.  If no, press cancel");
+          if (answer) {  // Ok
+            chrome.tabs.remove(tabId);
+          } else { // Cancel
+            return;
           }
-
-          let port = chrome.tabs.connect(tabId);
-          port.postMessage({
-            action: 'Add event handlers',
-          });
-          prevURLTracker[tabId] = tab.url;
-          chrome.storage.local.set({ [tabId.toString()]: null });
         }
-        captureTabThenGuardedCompare();
+
+        let port = chrome.tabs.connect(tabId);
+        port.postMessage({
+          action: 'Add event handlers',
+        });
+        prevURLTracker[tabId] = tab.url;
+        chrome.storage.local.set({ [tabId.toString()]: null });
       }
+      captureTabThenGuardedCompare();
     });
   }
 });
