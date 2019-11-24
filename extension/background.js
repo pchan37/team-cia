@@ -234,44 +234,23 @@ function showDifferences(beforeCanvas, outputData, taburl, tabId) {
     chrome.notifications.onButtonClicked.addListener((notifid, btnIdx) => {
       if (btnIdx === 0) {
 
-        // Rescale before canvas
-        let width = beforeCanvas.width;
-        let height = beforeCanvas.height;
-        let tempCanvas = document.createElement('canvas');
-        tempCanvas.width = width * 0.45;
-        tempCanvas.height = height * 0.45;
-        let tempContext = tempCanvas.getContext('2d');
-        tempContext.drawImage(beforeCanvas, 0, 0, width, height, 0, 0, width * 0.45, height * 0.45);
-
-        // Rescale output Canvas
-        let rescaleOutputCanvas = document.createElement('canvas');
-        rescaleOutputCanvas.width = width * 0.45;
-        rescaleOutputCanvas.height = height * 0.45;
-        let rescaleOutputContext = rescaleOutputCanvas.getContext('2d');
-        rescaleOutputContext.drawImage(outputCanvas, 0, 0, width, height, 0, 0, width * 0.45, height * 0.45);
+        // Resize the before and output Canvases
+        let rescaledBefore = resizeCanvas(beforeCanvas, 0.45);
+        let rescaledOutput = resizeCanvas(outputCanvas, 0.45);
 
         // Create source for the two canvases 
-        let url = rescaleOutputCanvas.toDataURL("outputImage/png");
-        let urlBefore = tempCanvas.toDataURL("beforeImage/png");
+        let url = rescaledOutput.toDataURL("outputImage/png");
+        let urlBefore = rescaledBefore.toDataURL("beforeImage/png");
 
         // Displays difference in new window
-        let popW = tempCanvas.width * 1.2, popH = tempCanvas.height * 1.2;
+        let popW = rescaledBefore.width * 1.2, popH = rescaledBefore.height * 1.2;
         let popup = window.open("", "popup", "width=" + popW + ",height=" + popH + ", scrollbars=yes");
 
-        // Get elements within the popup 
-        let beforeElement = popup.document.getElementById('beforeCanvas');
-        let outputElemenet = popup.document.getElementById('outputImage');
-        let beforeText = popup.document.getElementById('before_text');
-        let outputText = popup.document.getElementById('output_text');
-        let afterText = popup.document.getElementById('after_text');
-        let yesbutton = popup.document.getElementById('yesbutton');
-        //console.log("This is the before canvas " + beforeElement);
-
-	// Clear the children in the window
-	const body = document.querySelector('body')
-	while (body.children.length != 0) {
-	  body.removeChild(body.firstChild);
-	}
+        // Clear the children in the window
+        const body = popup.document.querySelector('body')
+        while (body.children.length != 0) {
+          body.removeChild(body.firstChild);
+        }
 
         // Insert all contents into the window 
         popup.document.write("<h1 id='before_text'> The below image is the screenshot of your page before you left your tab <br></h1>");
@@ -298,6 +277,17 @@ function showDifferences(beforeCanvas, outputData, taburl, tabId) {
       chrome.notifications.clear(notifyID);
     });
   }
+}
+
+function resizeCanvas(oldCanvas, perc){
+  let width = oldCanvas.width;
+  let height = oldCanvas.height;
+  let rescaledCanvas = document.createElement('canvas');
+  rescaledCanvas.width = width* perc;
+  rescaledCanvas.height = height * 0.45;
+  let rescaledContext = rescaledCanvas.getContext('2d');
+  rescaledContext.drawImage(oldCanvas, 0, 0, width, height, 0, 0, width* perc, height * perc);
+  return rescaledCanvas;
 }
 
 // This will always return true for now 
