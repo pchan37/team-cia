@@ -26,7 +26,7 @@ func MustSetup(mux *chi.Mux) {
 
 	authenticationKey := MustDecodeBase64(viper.GetString(config.AuthenticationKey))
 	encryptionKey := MustDecodeBase64(viper.GetString(config.EncryptionKey))
-	csrfAuthenticationKey := MustDecodeBase64(viper.GetString(config.CSRFAuthenticationKey))
+	// csrfAuthenticationKey := MustDecodeBase64(viper.GetString(config.CSRFAuthenticationKey))
 
 	mongoClient := securitydb.MustMongoClient(context.TODO(), "mongodb://localhost:27017")
 	webauth.RegisterDatabase(mongoClient)
@@ -36,7 +36,7 @@ func MustSetup(mux *chi.Mux) {
 
 	allowedOrigins := viper.GetStringSlice(config.AllowedOrigins)
 	webauth.SetupCORS(mux, false, allowedOrigins)
-	webauth.SetupCSRF(mux, csrfAuthenticationKey, config.ProdRun)
+	// webauth.SetupCSRF(mux, csrfAuthenticationKey, config.ProdRun)
 
 	webauth.RegisterPermissionTable(map[string][]string{
 		"developer": []string{"/dev_console"},
