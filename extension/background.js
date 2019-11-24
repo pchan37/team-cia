@@ -56,6 +56,11 @@ chrome.runtime.onConnect.addListener(port => {
         }
       }
     }
+    if (message.action === 'Clear then capture') {
+      const tabId = messageSender.sender.tab.id;
+      clearTabIdAndCurrentDataURI(tabId);
+      captureTabThenGuardedCompare();
+    }
   });
 });
 
@@ -137,7 +142,6 @@ function guardedCompare(tabId) {
     let currentURL = tab.url;
     if (prevURL === currentURL) {
       console.log('[DEBUG] Put through pixelmatch.');
-      let port = chrome.tabs.connect(tabId);
       chrome.storage.local.get([tabId.toString(), 'current'], result => {
         let oldDataURI = result[tabId];
         let newDataURI = result['current'];
