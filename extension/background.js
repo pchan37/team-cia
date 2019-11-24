@@ -86,9 +86,25 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       if (tab !== undefined) {
         if (prevURLTracker[tabId] !== tab.url) {
           if (inBlacklist(tab.url)) {
-            alert('Warning: This page is probably malicious, are you sure you want to continue?');
-            return;
+            //over here
+            var answer;
+            answer = confirm("Warning! This page is probably malicious\nDo you want to leave?  If yes, press ok.  If no, press cancel");
+            if (answer === true) {  //Ok
+              $('#close_window').on('click', function(){
+                //window.opener = self;
+                //window.close();
+                //chrome.window.remove(tabId);
+             });
+              
+              alert("this didn't work");
+            
+              
+            }
+            else { //Cancel
+              return;
+            }
           }
+
           let port = chrome.tabs.connect(tabId);
           port.postMessage({
             action: 'Add event handlers',
