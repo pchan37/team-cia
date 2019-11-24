@@ -4,8 +4,8 @@ let tabCount = 0; // for debugging purposes
 let captureCount = 0; // for debugging purposes
 let blacklist = [];
 
-let hasHandlerTracker = {};
 let prevURLTracker = {};
+let lastActivatedTabId = null;
 
 const notifyID = "Notification";
 const options = {
@@ -42,10 +42,17 @@ chrome.runtime.onConnect.addListener(port => {
   port.onMessage.addListener((message, messageSender) => {
     console.log(message);
     if (message.action === 'Capture tab') {
-      console.log('been told to capture tab!!!!');
-      const tabId = message.info.tabId;
-      chrome.storage.local.set({ [tabId.toString()]: null });
-      captureTabThenGuardedCompare();
+      if (message.from === 'resize') {
+        const tabId = messageSender.sender.tab.id;
+        chrome.storage.local.set({ [tabId.toString()]: null });
+        captureTabThenGuardedCompare();
+      }
+      if (message.from === 'blur') {
+        let blurTabId = messageSender.sender.tab.id;
+        if (blurTabId === lastActivatedTabId) {
+          captureTabThenGuardedCompare();
+        }
+      }
     }
   });
 });
@@ -55,6 +62,7 @@ chrome.runtime.onConnect.addListener(port => {
 chrome.tabs.onActivated.addListener(activeInfo => {
   console.log("on activated triggered");
   let { tabId } = activeInfo;
+  lastActivatedTabId = tabId;
   chrome.tabs.get(tabId, tab => {
     if (tab !== undefined) {
       prevURLTracker[tabId] = tab.url;
@@ -74,7 +82,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   let statusComplete = changeInfo.status === "complete" && tab.status === "complete";
   if (statusComplete && tab.active) {
     console.log("on updated triggered");
-    console.log('--------------------------');
     chrome.tabs.get(tabId, tab => {
       if (tab !== undefined) {
         if (prevURLTracker[tabId] !== tab.url) {
@@ -84,10 +91,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
           }
           let port = chrome.tabs.connect(tabId);
           port.postMessage({
-            action: 'Add resize handler',
-            info: {
-              tabId: tabId
-            }
+            action: 'Add event handlers',
           });
           prevURLTracker[tabId] = tab.url;
           chrome.storage.local.set({ [tabId.toString()]: null });
@@ -99,20 +103,16 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 });
 
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-  if (tabId in hasHandlerTracker)
-    delete hasHandlerTracker[tabId];
   if (tabId in prevURLTracker)
     delete prevURLTracker[tabId];
 });
 
 function captureTabThenGuardedCompare() {
   chrome.tabs.captureVisibleTab(chrome.windows.WINDOW_ID_CURRENT, { format: "png" }, dataURI => {
-    console.log("capturing visible tab");
     if (chrome.runtime.lastError) {
-      console.log('runtime err');
-      console.log('-------------------');
       return;
     }
+    console.log("capturing visible tab");
     chrome.tabs.query({ currentWindow: true, active: true }, tabs => {
       if (dataURI !== undefined && dataURI !== null) {
         let activeTabId = tabs[0].id.toString();
@@ -279,14 +279,14 @@ function showDifferences(beforeCanvas, outputData, taburl, tabId) {
   }
 }
 
-function resizeCanvas(oldCanvas, perc){
+function resizeCanvas(oldCanvas, perc) {
   let width = oldCanvas.width;
   let height = oldCanvas.height;
   let rescaledCanvas = document.createElement('canvas');
-  rescaledCanvas.width = width* perc;
+  rescaledCanvas.width = width * perc;
   rescaledCanvas.height = height * 0.45;
   let rescaledContext = rescaledCanvas.getContext('2d');
-  rescaledContext.drawImage(oldCanvas, 0, 0, width, height, 0, 0, width* perc, height * perc);
+  rescaledContext.drawImage(oldCanvas, 0, 0, width, height, 0, 0, width * perc, height * perc);
   return rescaledCanvas;
 }
 
@@ -338,6 +338,7 @@ function compare(string1, string2, url, tabId) {
         console.log("Image different Dimensions. Can't put through pixelmatch");
       }
       else {
+        console.log("comparing images");
         compareImages(image1, image2, img1W, img2H, url, tabId);
       }
     });

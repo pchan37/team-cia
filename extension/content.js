@@ -4,12 +4,10 @@ console.log('from content.js!');
 
 const port = chrome.runtime.connect();
 
-function sendCaptureMsg(tabId) {
+function sendCaptureMsg(fromEvent) {
   port.postMessage({
     action: 'Capture tab',
-    info: {
-      tabId: tabId
-    }
+    from: fromEvent
   });
 }
 
@@ -30,10 +28,13 @@ chrome.runtime.onConnect.addListener(port => {
   console.log('connected!');
   port.onMessage.addListener(async message => {
     console.log(message);
-    if (message.action === 'Add resize handler') {
-      console.log('resize handler');
+    if (message.action === 'Add event handlers') {
+      console.log('adding both event handlers');
       window.addEventListener('resize', () => {
-        sendCaptureMsg(message.info.tabId);
+        sendCaptureMsg('resize');
+      });
+      window.addEventListener('blur', () => {
+        sendCaptureMsg('blur');
       });
     };
     if (message.action === 'Add to blacklist') {
