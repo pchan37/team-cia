@@ -94,10 +94,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
           return;
         }
 
-        let port = chrome.tabs.connect(tabId);
-        port.postMessage({
-          action: 'Add event handlers',
-        });
         prevURLTracker[tabId] = tab.url;
         clearTabIdAndCurrentDataURI(tabId);
       }
