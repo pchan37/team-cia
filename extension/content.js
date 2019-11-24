@@ -23,9 +23,22 @@ function sendCaptureMsg(tabId) {
   });
 }
 
+async function addToBlacklist() {
+  const url = window.location.host;
+  
+  const params = new URLSearchParams();
+  params.append('url', url);
+
+  fetch('https://stoptabnabbing.online/add_url', {
+    method: 'post',
+    body: params,
+  });
+    
+}
+
 chrome.runtime.onConnect.addListener(port => {
   console.log('connected!');
-  port.onMessage.addListener(message => {
+  port.onMessage.addListener(async message => {
     console.log(message);
     if (message.action === 'Fetch origin') {
       let origin = window.location.origin;
@@ -40,5 +53,8 @@ chrome.runtime.onConnect.addListener(port => {
         sendCaptureMsg(message.info.tabId);
       });
     };
+    if (message.action === 'Add to blacklist') {
+      addToBlacklist();
+    }
   });
 });

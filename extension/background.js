@@ -151,8 +151,7 @@ function guardedCompare(tabId) {
         let newDataURI = result["current"];
         console.log('new datauri');
         if (newDataURI !== null && newDataURI !== undefined) {
-          compare(oldDataURI, newDataURI, tab.url);
-          console.log("Tab URL is " + tab.url);
+          compare(oldDataURI, newDataURI, tab.url, tabId);
           chrome.storage.local.set({ [tabId]: newDataURI });
           chrome.storage.local.set({ current: null });
         }
@@ -176,7 +175,7 @@ function createCanvas(image, width, height) {
 }
 
 // Compare two images 
-function compareImages(image1, image2, width, height, url) {
+function compareImages(image1, image2, width, height, url, tabId) {
   // Create canvas for before and after images 
   const canvas1 = createCanvas(image1, width, height);
   const canvas2 = createCanvas(image2, width, height);
@@ -197,12 +196,12 @@ function compareImages(image1, image2, width, height, url) {
     { threshold: 0.05, alpha: 0.7, includeAA: true });
 
   // outputData contains the result from pixelmatch. Show difference in a popup
-  showDifferences(canvas1, outputData, url);
+  showDifferences(canvas1, outputData, url, tabId);
 }
 
 
 // outputData is an ImageData, beforeCanvas is a canvas 
-function showDifferences(beforeCanvas, outputData, taburl) {
+function showDifferences(beforeCanvas, outputData, taburl, tabId) {
   let outputCanvas = document.createElement('canvas'); //  new HTMLCanvasElement();
   outputCanvas.width = outputData.width;
   outputCanvas.height = outputData.height;
@@ -267,20 +266,25 @@ function showDifferences(beforeCanvas, outputData, taburl) {
         popup.document.write("<img id='outputImage' src='" + url + "' alt='from canvas'/>");
         popup.document.title = "Differences for: " + taburl;
         popup.document.write("<h1 id = 'after_text'> <br>Would you like to add this site to the blacklist?<br></h1>");
-        popup.document.write("<button style='margin-right:10px;' onclick='gotoreserve()'>Yes</button>");
-        popup.document.write("<button id='bttn'>No</button>");
-        let btns = popup.document.getElementById("bttn");
-        btns.addEventListener("click",function(){
+        popup.document.write("<button id='yes-button' style='margin-right:10px;'>Yes</button>");
+        popup.document.write("<button id='no-button'>No</button>");
+        const noButton = popup.document.getElementById("no-button");
+        noButton.addEventListener("click",function(){
           popup.window.close();
-      }, false);
-  
+        });
+        const yesButton = popup.document.getElementById("yes-button"); 
+        yesButton.addEventListener("click", () => {
+          const port = chrome.tabs.connect(tabId);
+          port.postMessage({
+            action: 'Add to blacklist',
+          });
+          popup.window.close();
+        });
       }
       chrome.notifications.clear(notifyID);
     });
   }
 }
-
-
 
 // This will always return true for now 
 function checkThreshold(outputData) {
@@ -290,17 +294,17 @@ function checkThreshold(outputData) {
 // Get the dimensions of the images 
 async function getDimensions(base64String) {
   let promise = new Promise((resolved) => {
-    let i = new Image()
+    let i = new Image();
     i.onload = function () {
-      resolved({ w: i.width, h: i.height })
+      resolved({ w: i.width, h: i.height });
     };
-    i.src = base64String
+    i.src = base64String;
   });
   return await promise;
 }
 
 //Inputs are two binary64 strings and the url of the tab
-function compare(string1, string2, url) {
+function compare(string1, string2, url, tabId) {
   console.log("compare.js called");
   // console.log(string1);
   // console.log(string2);
@@ -327,10 +331,10 @@ function compare(string1, string2, url) {
       if ((img1W !== img2W) || (img1H !== img2H)) {
         // Handle in notification 
         chrome.notifications.create(warningID, warningOptions);
-        console.log("Image different Dimensions. Can't put through pixelmatch")
+        console.log("Image different Dimensions. Can't put through pixelmatch");
       }
       else {
-        compareImages(image1, image2, img1W, img2H, url);
+        compareImages(image1, image2, img1W, img2H, url, tabId);
       }
     });
   }
