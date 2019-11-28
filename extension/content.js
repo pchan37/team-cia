@@ -1,14 +1,69 @@
-"use strict";
+'use strict';
 
-console.log('from content.js!');
+console.log('[DEBUG] From content.js!');
 
 const port = chrome.runtime.connect();
 let intervalId = null;
+
+init();
+
+chrome.runtime.onConnect.addListener(port => {
+  console.log('[DEBUG] Connected to port.');
+  port.onMessage.addListener(async message => {
+    console.log(message);
+    if (message.action === 'Add to blacklist') {
+      addToBlacklist();
+    }
+  });
+});
+
+function init() {
+  initHandlers();
+  checkDOMFocus();
+}
+
+function checkDOMFocus() {
+  if (document.hasFocus()) {
+    intervalId = setInterval(() => {
+      console.log('[DEBUG] Interval in action.');
+      sendClearThenCaptureMsg();
+    }, 5000);
+  }
+}
+
+function initHandlers() {
+  window.addEventListener('focus', () => {
+    intervalId = setInterval(() => {
+      console.log('[DEBUG] Interval in action');
+      sendClearThenCaptureMsg();
+    }, 5000);
+  });
+  window.addEventListener('resize', () => {
+    sendCaptureMsg('resize');
+  });
+  window.addEventListener('blur', () => {
+    sendCaptureMsg('blur');
+    if (intervalId !== null) {
+      console.log('[DEBUG] Clearing interval.');
+      clearInterval(intervalId);
+    }
+  });
+}
 
 function sendCaptureMsg(fromEvent) {
   port.postMessage({
     action: 'Capture tab',
     from: fromEvent
+  });
+}
+
+function sendClearThenCaptureMsg() {
+  if (port === undefined || port === null) {
+    clearInterval(intervalId);
+    return;
+  }
+  port.postMessage({
+    action: 'Clear then capture'
   });
 }
 
@@ -24,45 +79,3 @@ async function addToBlacklist() {
   });
 
 }
-
-window.addEventListener('focus', () => {
-  intervalId = setInterval(() => {
-    console.log('interval in action');
-    sendClearThenCaptureMsg();
-  }, 10000);
-});
-
-function sendClearThenCaptureMsg() {
-  port.postMessage({
-    action: 'Clear then capture'
-  });
-}
-
-window.addEventListener('resize', () => {
-  sendCaptureMsg('resize');
-});
-
-window.addEventListener('blur', () => {
-  sendCaptureMsg('blur');
-  if (intervalId !== null) {
-    console.log('clearing interval');
-    clearInterval(intervalId);
-  }
-});
-
-if (document.hasFocus()) {
-  intervalId = setInterval(() => {
-    console.log('interval in action');
-    sendClearThenCaptureMsg();
-  }, 5000);
-}
-
-chrome.runtime.onConnect.addListener(port => {
-  console.log('connected!');
-  port.onMessage.addListener(async message => {
-    console.log(message);
-    if (message.action === 'Add to blacklist') {
-      addToBlacklist();
-    }
-  });
-});

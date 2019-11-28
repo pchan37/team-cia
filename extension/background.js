@@ -87,13 +87,13 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     chrome.tabs.get(tabId, tab => {
       if (tab !== undefined && prevURLTracker[tabId] !== tab.url) {
         if (inBlacklist(tab.url)) {
-          const leave = confirm('Warning! This page is probably malicious\nDo you want to leave?  If yes, press ok.  If no, press cancel.');
+          const leave = confirm('Warning! This page is probably malicious\n\
+          Do you want to leave?  If yes, press ok.  If no, press cancel.');
           if (leave) {
             chrome.tabs.remove(tabId);
           }
           return;
         }
-
         prevURLTracker[tabId] = tab.url;
         clearTabIdAndCurrentDataURI(tabId);
       }
