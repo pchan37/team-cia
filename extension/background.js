@@ -160,6 +160,9 @@ function guardedCompare(tabId) {
 // Retrieves the blacklist from the server
 async function refreshBlacklist() {
   blacklist = await fetch(BLACKLIST_ENDPOINT).then(resp => resp.json());
+  if (blacklist == null) {
+    blacklist = [];
+  }
 }
 
 // Check if url is in the blacklist
