@@ -9,7 +9,7 @@ init();
 
 chrome.runtime.onConnect.addListener(port => {
   console.log('[DEBUG] Connected to port.');
-  port.onMessage.addListener(async message => {
+  port.onMessage.addListener(message => {
     console.log(message);
     if (message.action === 'Add to blacklist') {
       addToBlacklist();
@@ -67,7 +67,7 @@ function sendClearThenCaptureMsg() {
   });
 }
 
-async function addToBlacklist() {
+function addToBlacklist() {
   const url = window.location.host;
 
   const params = new URLSearchParams();
@@ -77,5 +77,4 @@ async function addToBlacklist() {
     method: 'post',
     body: params,
   });
-
 }
