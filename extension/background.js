@@ -9,27 +9,6 @@ let lastActivatedTabId = null;
 
 const BLACKLIST_ENDPOINT = 'https://stoptabnabbing.online/get_blacklist';
 
-const notifyID = 'Notification';
-const options = {
-  type: 'basic',
-  iconUrl: 'sus_image.png',
-  title: 'Changes in Tab Detected!',
-  message: 'Would you like to view?',
-  buttons: [{
-    title: 'Yes',
-  }, {
-    title: 'No',
-  }]
-};
-
-const warningID = 'Warning';
-const warningOptions = {
-  type: 'basic',
-  iconUrl: 'warning.png',
-  title: 'Incompatible Window Sizes!',
-  message: 'Different window sizes, unable to detect any changes'
-};
-
 function init() {
   refreshBlacklist();
   // Refresh the blacklist every hour
@@ -38,6 +17,12 @@ function init() {
 
 // Anything that should be run when the extension loads goes in init
 init();
+
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason == 'install') {
+    createRestartNotif();
+  }
+});
 
 chrome.runtime.onConnect.addListener(port => {
   console.log('[DEBUG] Connected!');
@@ -200,6 +185,7 @@ function clearTabIdAndCurrentDataURI(tabId) {
 /******************************************************************/
 /***************** COMPARISON CODE STARTS HERE ********************/
 /******************************************************************/
+
 // Create a canvas for the image 
 function createCanvas(image, width, height) {
   let canvas = document.createElement('canvas');
@@ -236,7 +222,6 @@ function compareImages(image1, image2, width, height, url, tabId) {
   showDifferences(canvas1, outputData, url, tabId);
 }
 
-
 // outputData is an ImageData, beforeCanvas is a canvas 
 function showDifferences(beforeCanvas, outputData, taburl, tabId) {
   let outputCanvas = document.createElement('canvas'); //  new HTMLCanvasElement();
@@ -246,56 +231,86 @@ function showDifferences(beforeCanvas, outputData, taburl, tabId) {
   outputContext.putImageData(outputData, 0, 0);
 
   // Determine if the output passes threshold 
-  let pass = checkThreshold(outputData);
+  if (checkThreshold(outputData)) {
+    createChangesDetectedNotif();
+    chrome.notifications.onButtonClicked.addListener((notifId, buttonIndex) => {
+      if (notifId === 'changesDetectedNotif') {
+        if (buttonIndex === 0) {
+          // Resize the before and output canvases
+          let rescaledBefore = resizeCanvas(beforeCanvas, 0.45);
+          let rescaledOutput = resizeCanvas(outputCanvas, 0.45);
 
-  if (pass) {
-    chrome.notifications.create(notifyID, options);
-    chrome.notifications.onButtonClicked.addListener((notifid, btnIdx) => {
-      if (btnIdx === 0) {
+          // Create source for the two canvases 
+          let url = rescaledOutput.toDataURL('outputImage/png');
+          let urlBefore = rescaledBefore.toDataURL('beforeImage/png');
+          let popW = rescaledBefore.width * 1.2, popH = rescaledBefore.height * 1.2;
 
-        // Resize the before and output Canvases
-        let rescaledBefore = resizeCanvas(beforeCanvas, 0.45);
-        let rescaledOutput = resizeCanvas(outputCanvas, 0.45);
-
-        // Create source for the two canvases 
-        let url = rescaledOutput.toDataURL('outputImage/png');
-        let urlBefore = rescaledBefore.toDataURL('beforeImage/png');
-
-        // Displays difference in new window
-        let popW = rescaledBefore.width * 1.2, popH = rescaledBefore.height * 1.2;
-        let popup = window.open('', 'popup', 'width=' + popW + ',height=' + popH + ', scrollbars=yes');
-
-        // Clear the children in the window
-        const body = popup.document.querySelector('body');
-        while (body.children.length != 0) {
-          body.removeChild(body.firstChild);
+          // Displays difference in new window
+          showPopup(popW, popH, urlBefore, url, taburl);
         }
-
-        // Insert all contents into the window 
-        popup.document.write("<h1> The below image is the screenshot of your page before you left your tab <br></h1>");
-        popup.document.write("<img src='" + urlBefore + "' alt='from canvas'/>");
-        popup.document.write("<h1> <br>The below image is the difference between when you left and you came back to your tab. Any red area indicates deviations from the previous image<br></h1>");
-        popup.document.write("<img src='" + url + "' alt='from canvas'/>");
-        popup.document.title = "Differences for: " + taburl;
-        popup.document.write("<h1> <br>Would you like to add this site to the blacklist?<br></h1>");
-        popup.document.write("<button id='yes-button' style='margin-right:10px;'>Yes</button>");
-        popup.document.write("<button id='no-button'>No</button>");
-        const noButton = popup.document.getElementById("no-button");
-        noButton.addEventListener('click', function () {
-          popup.window.close();
-        });
-        const yesButton = popup.document.getElementById('yes-button');
-        yesButton.addEventListener('click', () => {
-          const port = chrome.tabs.connect(tabId);
-          port.postMessage({
-            action: 'Add to blacklist',
-          });
-          popup.window.close();
-        });
+        chrome.notifications.clear(notifId);
       }
-      chrome.notifications.clear(notifyID);
     });
   }
+}
+
+function createChangesDetectedNotif() {
+  chrome.notifications.create('changesDetectedNotif', {
+    type: 'basic',
+    iconUrl: 'sus_image.png',
+    title: 'Changes Detected',
+    message: 'Would you like to view the changes?',
+    buttons: [
+      { title: 'Yes' },
+      { title: 'No' }
+    ]
+  });
+}
+
+function createIncompatibleSizesNotif() {
+  chrome.notifications.create('incompatibleSizesNotif', {
+    type: 'basic',
+    iconUrl: 'warning.png',
+    title: 'Incompatible Window Sizes',
+    message: 'The extension is unable to check for any changes because of different window sizes.'
+  });
+}
+
+function createRestartNotif() {
+  chrome.notifications.create('restartNotif', {
+    type: 'basic',
+    title: 'Restart Recommended for Full Effect',
+    message: 'To restart your browser, go to chrome://restart.',
+    iconUrl: 'warning.png',
+  });
+}
+
+function showPopup(popW, popH, urlBefore, url, taburl) {
+  let popup = window.open('', 'popup', 'width=' + popW + ',height=' + popH + ', scrollbars=yes');
+  const body = popup.document.querySelector('body');
+
+  while (body.children.length != 0) {
+    body.removeChild(body.firstChild);
+  }
+
+  popup.document.write("<h1> The below image is the screenshot of your page before you left your tab <br></h1>");
+  popup.document.write("<img src='" + urlBefore + "' alt='from canvas'/>");
+  popup.document.write("<h1> <br>The below image is the difference between when you left and you came back to your tab. Any red area indicates deviations from the previous image<br></h1>");
+  popup.document.write("<img src='" + url + "' alt='from canvas'/>");
+  popup.document.title = "Differences for: " + taburl;
+  popup.document.write("<h1> <br>Would you like to add this site to the blacklist?<br></h1>");
+  popup.document.write("<button id='yes-button' style='margin-right:10px;'>Yes</button>");
+  popup.document.write("<button id='no-button'>No</button>");
+  const noButton = popup.document.getElementById("no-button");
+  const yesButton = popup.document.getElementById('yes-button');
+  noButton.addEventListener('click', () => popup.window.close());
+  yesButton.addEventListener('click', () => {
+    const port = chrome.tabs.connect(tabId);
+    port.postMessage({
+      action: 'Add to blacklist',
+    });
+    popup.window.close();
+  });
 }
 
 function resizeCanvas(oldCanvas, perc) {
@@ -348,7 +363,7 @@ function compare(string1, string2, url, tabId) {
       let img2W = (values[1]).w;
       let img2H = (values[1]).h;
       if ((img1W !== img2W) || (img1H !== img2H)) {
-        chrome.notifications.create(warningID, warningOptions);
+        createIncompatibleSizesNotif();
         console.log('[DEBUG] Image different Dimensions. Can not put through pixelmatch.');
       }
       else {
