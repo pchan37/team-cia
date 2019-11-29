@@ -24,7 +24,7 @@ chrome.runtime.onInstalled.addListener((details) => {
   }
 });
 
-chrome.runtime.onConnect.addListener(port => {
+chrome.runtime.onConnect.addListener((port) => {
   console.log('[DEBUG] Connected!');
   port.onMessage.addListener((message, messageSender) => {
     console.log(message);
@@ -51,12 +51,12 @@ chrome.runtime.onConnect.addListener(port => {
 
 // This is reponsible for tab capturing when you switch between tabs.
 // It is also responsible for saving the tab url when you open the tab.
-chrome.tabs.onActivated.addListener(activeInfo => {
+chrome.tabs.onActivated.addListener((activeInfo) => {
   console.log('[DEBUG] On activated triggered.');
   let { tabId } = activeInfo;
   lastActivatedTabId = tabId;
   tabId = tabId.toString();
-  chrome.storage.local.get([tabId], result => {
+  chrome.storage.local.get([tabId], (result) => {
     if (result[tabId] !== null && result[tabId] !== undefined) {
       captureTabThenGuardedCompare();
     }
@@ -69,7 +69,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   let statusComplete = changeInfo.status === 'complete' && tab.status === 'complete';
   if (statusComplete && tab.active) {
     console.log('[DEBUG] On updated triggered.');
-    chrome.tabs.get(tabId, tab => {
+    chrome.tabs.get(tabId, (tab) => {
       if (tab !== undefined && prevURLTracker[tabId] !== tab.url) {
         if (inBlacklist(tab.url)) {
           const leave = confirm('Warning! This page is probably malicious\n\
@@ -101,10 +101,10 @@ function captureTabThenGuardedCompare() {
       return;
     }
     console.log('[DEBUG] Capturing visible tab.');
-    chrome.tabs.query({ currentWindow: true, active: true }, tabs => {
+    chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
       if (dataURI !== undefined && dataURI !== null) {
         let activeTabId = tabs[0].id.toString();
-        chrome.storage.local.get([activeTabId], result => {
+        chrome.storage.local.get([activeTabId], (result) => {
           if (result[activeTabId] === null || result[activeTabId] === undefined) {
             setTabIdAndCurrentDataURI(activeTabId, dataURI, null);
           } else {
@@ -121,12 +121,12 @@ function captureTabThenGuardedCompare() {
 }
 
 function guardedCompare(tabId) {
-  chrome.tabs.get(tabId, tab => {
+  chrome.tabs.get(tabId, (tab) => {
     let prevURL = prevURLTracker[tabId];
     let currentURL = tab.url;
     if (prevURL === currentURL) {
       console.log('[DEBUG] Put through pixelmatch.');
-      chrome.storage.local.get([tabId.toString(), 'current'], result => {
+      chrome.storage.local.get([tabId.toString(), 'current'], (result) => {
         let oldDataURI = result[tabId];
         let newDataURI = result['current'];
         if (newDataURI !== null && newDataURI !== undefined) {
