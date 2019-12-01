@@ -14,30 +14,20 @@ chrome.runtime.onConnect.addListener(port => {
     if (message.action === 'Add to blacklist') {
       addToBlacklist();
     }
+    if (message.action === 'Start the timer') {
+      intervalId = setInterval(() => {
+        console.log('[DEBUG] Interval in action.');
+        sendClearThenCaptureMsg();
+      }, 1000);
+    }
   });
 });
 
 function init() {
   initHandlers();
-  checkDOMFocus();
-}
-
-function checkDOMFocus() {
-  if (document.hasFocus()) {
-    intervalId = setInterval(() => {
-      console.log('[DEBUG] Interval in action.');
-      sendClearThenCaptureMsg();
-    }, 5000);
-  }
 }
 
 function initHandlers() {
-  window.addEventListener('focus', () => {
-    intervalId = setInterval(() => {
-      console.log('[DEBUG] Interval in action');
-      sendClearThenCaptureMsg();
-    }, 5000);
-  });
   window.addEventListener('resize', () => {
     sendCaptureMsg('resize');
   });

@@ -5,9 +5,10 @@ let captureCount = 0; // for debugging purposes
 let blacklist = [];
 
 let prevURLTracker = {};
-let lastActivatedTabId = null;
 
 const BLACKLIST_ENDPOINT = 'https://stoptabnabbing.online/get_blacklist';
+const MALICIOUS_PAGE_WARNING = 'Warning! This page is probably malicious\n' +
+      'Do you want to leave?  If yes, press ok.  If no, press cancel.';
 
 function init() {
   refreshBlacklist();
@@ -36,15 +37,24 @@ chrome.runtime.onConnect.addListener((port) => {
       }
       if (message.from === 'blur') {
         const blurTabId = messageSender.sender.tab.id;
-        if (blurTabId === lastActivatedTabId) {
-          captureTabThenGuardedCompare();
-        }
+        chrome.tabs.query({ currentWindow: true, active: true }, tabs => {
+          const tabId = tabs[0].id;
+          if (blurTabId === tabId) {
+            captureTabThenGuardedCompare();
+
+            // Start the timer to capture every X milliseconds
+            console.log('[DEBUG] Sending the message to start the timer due to blur.');
+            const port = chrome.tabs.connect(blurTabId);
+            port.postMessage({
+              action: 'Start the timer',
+            });
+          }
+        });
       }
     }
     if (message.action === 'Clear then capture') {
       const tabId = messageSender.sender.tab.id;
-      clearTabIdAndCurrentDataURI(tabId);
-      captureTabThenGuardedCompare();
+      clearTabIdAndCurrentDataURI(tabId, captureTabThenGuardedCompare);
     }
   });
 });
@@ -54,11 +64,18 @@ chrome.runtime.onConnect.addListener((port) => {
 chrome.tabs.onActivated.addListener((activeInfo) => {
   console.log('[DEBUG] On activated triggered.');
   let { tabId } = activeInfo;
-  lastActivatedTabId = tabId;
   tabId = tabId.toString();
   chrome.storage.local.get([tabId], (result) => {
     if (result[tabId] !== null && result[tabId] !== undefined) {
+      // This should be the second (or subsequent) capture
       captureTabThenGuardedCompare();
+
+      // Start the timer to capture every X milliseconds
+      console.log('[DEBUG] Sending the message to start the timer due to onActivated.');
+      const port = chrome.tabs.connect(parseInt(tabId));
+      port.postMessage({
+        action: 'Start the timer',
+      });
     }
   });
 });
@@ -72,17 +89,23 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     chrome.tabs.get(tabId, (tab) => {
       if (tab !== undefined && prevURLTracker[tabId] !== tab.url) {
         if (inBlacklist(tab.url)) {
-          const leave = confirm('Warning! This page is probably malicious\n\
-          Do you want to leave?  If yes, press ok.  If no, press cancel.');
-          if (leave) {
+          if (confirm(MALICIOUS_PAGE_WARNING)) {
             chrome.tabs.remove(tabId);
           }
           return;
         }
         prevURLTracker[tabId] = tab.url;
-        clearTabIdAndCurrentDataURI(tabId);
+
+        // Ensure that this is a clean first capture
+        clearTabIdAndCurrentDataURI(tabId, captureTabThenGuardedCompare);
+
+        // Start the timer to capture every X milliseconds
+        console.log('[DEBUG] Sending the message to start the timer due to onUpdated.');
+        const port = chrome.tabs.connect(tabId);
+        port.postMessage({
+          action: 'Start the timer',
+        });
       }
-      captureTabThenGuardedCompare();
     });
   }
 });
@@ -94,29 +117,29 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
 
 function captureTabThenGuardedCompare() {
   chrome.tabs.captureVisibleTab(chrome.windows.WINDOW_ID_CURRENT, { format: 'png' }, dataURI => {
-    // This is not actually something to worry about.  We don't want the extension to error on restricted
-    // domains as you would need the activeTab permission (which involves getting the user to click on your
-    // extension).
+    // This is not actually something to worry about.  We don't want the
+    // extension to error on restricted domains as you would need the activeTab
+    // permission (which involves getting the user to click on your extension).
     if (chrome.runtime.lastError) {
       return;
     }
     console.log('[DEBUG] Capturing visible tab.');
-    chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
-      if (dataURI !== undefined && dataURI !== null) {
+    if (dataURI !== undefined && dataURI !== null) {
+      chrome.tabs.query({ currentWindow: true, active: true }, tabs => {
         let activeTabId = tabs[0].id.toString();
         chrome.storage.local.get([activeTabId], (result) => {
           if (result[activeTabId] === null || result[activeTabId] === undefined) {
             setTabIdAndCurrentDataURI(activeTabId, dataURI, null);
           } else {
-            chrome.storage.local.set({ current: dataURI }, () => {
-              guardedCompare(tabs[0].id);
+            setTabIdAndCurrentDataURI(activeTabId, result[activeTabId], dataURI, () => {
+              guardedCompare(parseInt(activeTabId));
             });
           }
         });
-      } else {
-        console.log('[INFO] Data URI is undefined.');
-      }
-    });
+      });
+    } else {
+      console.log('[DEBUG] Data URI is undefined.');
+    }
   });
 }
 
@@ -127,8 +150,8 @@ function guardedCompare(tabId) {
     if (prevURL === currentURL) {
       console.log('[DEBUG] Put through pixelmatch.');
       chrome.storage.local.get([tabId.toString(), 'current'], (result) => {
-        let oldDataURI = result[tabId];
-        let newDataURI = result['current'];
+        const oldDataURI = result[tabId];
+        const newDataURI = result['current'];
         if (newDataURI !== null && newDataURI !== undefined) {
           compare(oldDataURI, newDataURI, tab.url, tabId);
           setTabIdAndCurrentDataURI(tabId, newDataURI, null);
@@ -166,20 +189,20 @@ function inBlacklist(url) {
 
 // Set the data URI for both the entry associated with the tabId and the entry
 // associated with current
-function setTabIdAndCurrentDataURI(tabId, tabIdDataURI, currentDataURI) {
+function setTabIdAndCurrentDataURI(tabId, tabIdDataURI, currentDataURI, callback) {
   chrome.storage.local.set({
     [tabId.toString()]: tabIdDataURI,
     current: currentDataURI,
-  });
+  }, callback);
 }
 
 // Clear the data URI for both the entry associated with the tabId and the entry
 // associated with current
-function clearTabIdAndCurrentDataURI(tabId) {
+function clearTabIdAndCurrentDataURI(tabId, callback) {
   chrome.storage.local.set({
     [tabId.toString()]: null,
     current: null,
-  });
+  }, callback);
 }
 
 /******************************************************************/
