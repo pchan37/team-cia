@@ -66,5 +66,9 @@ function addToBlacklist() {
   fetch('https://stoptabnabbing.online/add_url', {
     method: 'post',
     body: params,
+  }).then(() => {
+    port.postMessage({
+      action: 'Refresh blacklist'
+    });
   });
 }

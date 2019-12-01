@@ -56,6 +56,9 @@ chrome.runtime.onConnect.addListener((port) => {
       const tabId = messageSender.sender.tab.id;
       clearTabIdAndCurrentDataURI(tabId, captureTabThenGuardedCompare);
     }
+    if (message.action === 'Refresh blacklist') {
+      refreshBlacklist();
+    }
   });
 });
 
