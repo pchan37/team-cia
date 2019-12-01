@@ -15,10 +15,12 @@ chrome.runtime.onConnect.addListener(port => {
       addToBlacklist();
     }
     if (message.action === 'Start the timer') {
-      intervalId = setInterval(() => {
-        console.log('[DEBUG] Interval in action.');
-        sendClearThenCaptureMsg();
-      }, 1000);
+      if (intervalId === null) {
+        intervalId = setInterval(() => {
+          console.log('[DEBUG] Interval in action.');
+          sendClearThenCaptureMsg();
+        }, 1000);
+      }
     }
   });
 });
@@ -31,11 +33,20 @@ function initHandlers() {
   window.addEventListener('resize', () => {
     sendCaptureMsg('resize');
   });
+  window.addEventListener('focus', () => {
+    if (intervalId == null) {
+      intervalId = setInterval(() => {
+        console.log('[DEBUG] Interval in action.');
+        sendClearThenCaptureMsg();
+      }, 1000);
+    }
+  });
   window.addEventListener('blur', () => {
     sendCaptureMsg('blur');
     if (intervalId !== null) {
       console.log('[DEBUG] Clearing interval.');
       clearInterval(intervalId);
+      intervalId = null;
     }
   });
 }
