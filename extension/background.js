@@ -272,7 +272,7 @@ function showDifferences(beforeCanvas, outputData, taburl, tabId) {
           let popW = rescaledBefore.width * 1.2, popH = rescaledBefore.height * 1.2;
 
           // Displays difference in new window
-          showPopup(popW, popH, urlBefore, url, taburl);
+          showPopup(popW, popH, urlBefore, url, taburl, tabId);
         }
         chrome.notifications.clear(notifId);
       }
@@ -311,7 +311,7 @@ function createRestartNotif() {
   });
 }
 
-function showPopup(popW, popH, urlBefore, url, taburl) {
+function showPopup(popW, popH, urlBefore, url, taburl, tabId) {
   let popup = window.open('', 'popup', 'width=' + popW + ',height=' + popH + ', scrollbars=yes');
   const body = popup.document.querySelector('body');
 
@@ -336,6 +336,7 @@ function showPopup(popW, popH, urlBefore, url, taburl) {
       action: 'Add to blacklist',
     });
     popup.window.close();
+    chrome.tabs.remove(tabId);
   });
 }
 
