@@ -8,7 +8,7 @@ let prevURLTracker = {};
 
 const BLACKLIST_ENDPOINT = 'https://stoptabnabbing.online/get_blacklist';
 const MALICIOUS_PAGE_WARNING = 'Warning! This page is probably malicious\n' +
-      'Do you want to leave?  If yes, press ok.  If no, press cancel.';
+  'Do you want to leave?  If yes, press ok.  If no, press cancel.';
 
 function init() {
   refreshBlacklist();
@@ -90,24 +90,27 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (statusComplete && tab.active) {
     console.log('[DEBUG] On updated triggered.');
     chrome.tabs.get(tabId, (tab) => {
-      if (tab !== undefined && prevURLTracker[tabId] !== tab.url) {
-        if (inBlacklist(tab.url)) {
-          if (confirm(MALICIOUS_PAGE_WARNING)) {
-            chrome.tabs.remove(tabId);
+      const chromePrefix = 'chrome://';
+      if (tab !== undefined && !tab.url.startsWith(chromePrefix)) {
+        if (prevURLTracker[tabId] !== tab.url) {
+          if (inBlacklist(tab.url)) {
+            if (confirm(MALICIOUS_PAGE_WARNING)) {
+              chrome.tabs.remove(tabId);
+            }
+            return;
           }
-          return;
+          prevURLTracker[tabId] = tab.url;
+
+          // Ensure that this is a clean first capture
+          clearTabIdAndCurrentDataURI(tabId, captureTabThenGuardedCompare);
+
+          // Start the timer to capture every X milliseconds
+          console.log('[DEBUG] Sending the message to start the timer due to onUpdated.');
+          const port = chrome.tabs.connect(tabId);
+          port.postMessage({
+            action: 'Start the timer',
+          });
         }
-        prevURLTracker[tabId] = tab.url;
-
-        // Ensure that this is a clean first capture
-        clearTabIdAndCurrentDataURI(tabId, captureTabThenGuardedCompare);
-
-        // Start the timer to capture every X milliseconds
-        console.log('[DEBUG] Sending the message to start the timer due to onUpdated.');
-        const port = chrome.tabs.connect(tabId);
-        port.postMessage({
-          action: 'Start the timer',
-        });
       }
     });
   }
@@ -123,9 +126,8 @@ function captureTabThenGuardedCompare() {
     // This is not actually something to worry about.  We don't want the
     // extension to error on restricted domains as you would need the activeTab
     // permission (which involves getting the user to click on your extension).
-    if (chrome.runtime.lastError) {
+    if (chrome.runtime.lastError)
       return;
-    }
     console.log('[DEBUG] Capturing visible tab.');
     if (dataURI !== undefined && dataURI !== null) {
       chrome.tabs.query({ currentWindow: true, active: true }, tabs => {
