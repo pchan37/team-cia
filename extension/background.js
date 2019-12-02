@@ -1,7 +1,5 @@
 'use strict';
 
-let tabCount = 0; // for debugging purposes
-let captureCount = 0; // for debugging purposes
 let blacklist = [];
 
 let prevURLTracker = {};
