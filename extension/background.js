@@ -244,7 +244,7 @@ function compareImages(image1, image2, width, height, url, tabId) {
 
   pixelmatch(imageData1.data, imageData2.data, outputData.data,
     outputData.width, outputData.height,
-    { threshold: 0.05, alpha: 0.7, includeAA: true });
+    { threshold: 0.075, alpha: 0.7, includeAA: true });
 
   // outputData contains the result from pixelmatch. Show difference in a popup
   showDifferences(canvas1, outputData, url, tabId);
