@@ -1,7 +1,7 @@
 {
-    "name": "Extension Testing, Even More Experimental",
+    "name": "Stop Tabnabbing Online",
     "version": "1.0",
-    "description": "Build an extension here!",
+    "description": "Prevents the most basic forms of tabnabbing.",
     "manifest_version": 2,
     "permissions": [
         "unlimitedStorage",
