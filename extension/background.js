@@ -103,14 +103,14 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
           // Ensure that this is a clean first capture
           clearTabIdAndCurrentDataURI(tabId, captureTabThenGuardedCompare);
-
-          // Start the timer to capture every X milliseconds
-          console.log('[DEBUG] Sending the message to start the timer due to onUpdated.');
-          const port = chrome.tabs.connect(tabId);
-          port.postMessage({
-            action: 'Start the timer',
-          });
         }
+
+        // Start the timer to capture every X milliseconds
+        console.log('[DEBUG] Sending the message to start the timer due to onUpdated.');
+        const port = chrome.tabs.connect(tabId);
+        port.postMessage({
+          action: 'Start the timer',
+        });
       }
     });
   }
