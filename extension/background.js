@@ -265,8 +265,8 @@ function showDifferences(beforeCanvas, outputData, taburl, tabId) {
       if (notifId === 'changesDetectedNotif') {
         if (buttonIndex === 0) {
           // Resize the before and output canvases
-          let rescaledBefore = resizeCanvas(beforeCanvas, 0.45);
-          let rescaledOutput = resizeCanvas(outputCanvas, 0.45);
+          let rescaledBefore = resizeCanvas(beforeCanvas, 1);
+          let rescaledOutput = resizeCanvas(outputCanvas, 1);
 
           // Create source for the two canvases 
           let url = rescaledOutput.toDataURL('outputImage/png');
