@@ -31,14 +31,14 @@ chrome.runtime.onConnect.addListener((port) => {
       if (message.from === 'resize') {
         const tabId = messageSender.sender.tab.id;
         clearTabIdAndCurrentDataURI(tabId);
-        captureTabThenGuardedCompare();
+        captureTabThenGuardedCompare(tabId);
       }
       if (message.from === 'blur') {
         const blurTabId = messageSender.sender.tab.id;
         chrome.tabs.query({ currentWindow: true, active: true }, tabs => {
           const tabId = tabs[0].id;
           if (blurTabId === tabId) {
-            captureTabThenGuardedCompare();
+            captureTabThenGuardedCompare(tabId);
 
             // Start the timer to capture every X milliseconds
             console.log('[DEBUG] Sending the message to start the timer due to blur.');
@@ -52,7 +52,9 @@ chrome.runtime.onConnect.addListener((port) => {
     }
     if (message.action === 'Clear then capture') {
       const tabId = messageSender.sender.tab.id;
-      clearTabIdAndCurrentDataURI(tabId, captureTabThenGuardedCompare);
+      clearTabIdAndCurrentDataURI(tabId, () => {
+        captureTabThenGuardedCompare(tabId);
+      });
     }
     if (message.action === 'Refresh blacklist') {
       refreshBlacklist();
@@ -69,7 +71,7 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
   chrome.storage.local.get([tabId], (result) => {
     if (result[tabId] !== null && result[tabId] !== undefined) {
       // This should be the second (or subsequent) capture
-      captureTabThenGuardedCompare();
+      captureTabThenGuardedCompare(tabId);
 
       // Start the timer to capture every X milliseconds
       console.log('[DEBUG] Sending the message to start the timer due to onActivated.');
@@ -100,7 +102,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
           prevURLTracker[tabId] = tab.url;
 
           // Ensure that this is a clean first capture
-          clearTabIdAndCurrentDataURI(tabId, captureTabThenGuardedCompare);
+          clearTabIdAndCurrentDataURI(tabId, () => {
+            captureTabThenGuardedCompare(tabId);
+          });
         }
 
         // Start the timer to capture every X milliseconds
@@ -119,7 +123,7 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     delete prevURLTracker[tabId];
 });
 
-function captureTabThenGuardedCompare() {
+function captureTabThenGuardedCompare(activeTabId) {
   chrome.tabs.captureVisibleTab(chrome.windows.WINDOW_ID_CURRENT, { format: 'png' }, dataURI => {
     // This is not actually something to worry about.  We don't want the
     // extension to error on restricted domains as you would need the activeTab
@@ -128,17 +132,15 @@ function captureTabThenGuardedCompare() {
       return;
     console.log('[DEBUG] Capturing visible tab.');
     if (dataURI !== undefined && dataURI !== null) {
-      chrome.tabs.query({ currentWindow: true, active: true }, tabs => {
-        let activeTabId = tabs[0].id.toString();
-        chrome.storage.local.get([activeTabId], (result) => {
-          if (result[activeTabId] === null || result[activeTabId] === undefined) {
-            setTabIdAndCurrentDataURI(activeTabId, dataURI, null);
-          } else {
-            setTabIdAndCurrentDataURI(activeTabId, result[activeTabId], dataURI, () => {
-              guardedCompare(parseInt(activeTabId));
-            });
-          }
-        });
+      activeTabId = activeTabId.toString();
+      chrome.storage.local.get([activeTabId], (result) => {
+        if (result[activeTabId] === null || result[activeTabId] === undefined) {
+          setTabIdAndCurrentDataURI(activeTabId, dataURI, null);
+        } else {
+          setTabIdAndCurrentDataURI(activeTabId, result[activeTabId], dataURI, () => {
+            guardedCompare(parseInt(activeTabId));
+          });
+        }
       });
     } else {
       console.log('[DEBUG] Data URI is undefined.');
@@ -240,12 +242,14 @@ function compareImages(image1, image2, width, height, url, tabId) {
   // Create new image data for the output 
   let outputData = new ImageData(canvas1.width, canvas2.height);
 
-  pixelmatch(imageData1.data, imageData2.data, outputData.data,
+  const numDiffPixels = pixelmatch(imageData1.data, imageData2.data, outputData.data,
     outputData.width, outputData.height,
     { threshold: 0.075, alpha: 0.7, includeAA: true });
 
-  // outputData contains the result from pixelmatch. Show difference in a popup
-  showDifferences(canvas1, outputData, url, tabId);
+  if (numDiffPixels > 0) {
+    // outputData contains the result from pixelmatch. Show difference in a popup
+    showDifferences(canvas1, outputData, url, tabId);
+  }
 }
 
 // outputData is an ImageData, beforeCanvas is a canvas 
@@ -478,8 +482,10 @@ function pixelmatch(img1, img2, output, width, height, options) {
 
         } else {
           // found substantial difference not caused by anti-aliasing; draw it as red
-          if (output) drawPixel(output, pos, diffR, diffG, diffB);
-          diff++;
+          if (output) {
+            drawPixel(output, pos, diffR, diffG, diffB);
+            diff++;
+          }
         }
 
       } else if (output) {
