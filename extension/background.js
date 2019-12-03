@@ -323,16 +323,16 @@ function showPopup(popW, popH, urlBefore, url, taburl, tabId) {
     body.removeChild(body.firstChild);
   }
 
-  popup.document.write("<h1> The below image is the screenshot of your page before you left your tab <br></h1>");
+  popup.document.write('<link rel="stylesheet" type="text/css" href="styles.css"/>');
+  popup.document.write("<h1>The below image is the screenshot of your page before you left your tab <br></h1>");
   popup.document.write("<img src='" + urlBefore + "' alt='from canvas'/>");
-  popup.document.write("<h1> <br>The below image is the difference between when you left and you came back to your tab. Any red area indicates deviations from the previous image<br></h1>");
+  popup.document.write("<p>The below image is the difference between when you left and when you came back to your tab.<mark class = 'red'> Any red area indicates deviations from previous image</mark></p>");
   popup.document.write("<img src='" + url + "' alt='from canvas'/>");
   popup.document.title = "Differences for: " + taburl;
-  popup.document.write("<h1> <br>Would you like to add this site to the blacklist?<br></h1>");
-  popup.document.write("<button id='yes-button' style='margin-right:10px;'>Yes</button>");
-  popup.document.write("<button id='no-button'>No</button>");
+  popup.document.write("<h3>Would you like to add this site to the blacklist?<br></h3>");
+  popup.document.write("<button class='button'>Yes</button>");
+  popup.document.write("<button class ='button button2'>No</button");
   const noButton = popup.document.getElementById("no-button");
-  const yesButton = popup.document.getElementById('yes-button');
   noButton.addEventListener('click', () => popup.window.close());
   yesButton.addEventListener('click', () => {
     const port = chrome.tabs.connect(tabId);
