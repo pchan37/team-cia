@@ -36,8 +36,10 @@ function initHandlers() {
   window.addEventListener('focus', () => {
     if (intervalId == null) {
       intervalId = setInterval(() => {
-        console.log('[DEBUG] Interval in action.');
-        sendClearThenCaptureMsg();
+        if (document.hasFocus()) {
+          console.log('[DEBUG] Interval in action.');
+          sendClearThenCaptureMsg();
+        }
       }, 1000);
     }
   });
