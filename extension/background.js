@@ -129,7 +129,7 @@ function captureTabThenGuardedCompare(activeTabId, callback) {
       activeTabId = activeTabId.toString();
       chrome.storage.local.get([activeTabId], (result) => {
         if (result[activeTabId] === null || result[activeTabId] === undefined) {
-          setTabIdAndCurrentDataURI(activeTabId, dataURI, null);
+          setTabIdAndCurrentDataURI(activeTabId, dataURI, null, callback);
         } else {
           setTabIdAndCurrentDataURI(activeTabId, result[activeTabId], dataURI, () => {
             guardedCompare(parseInt(activeTabId), callback);
