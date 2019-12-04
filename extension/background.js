@@ -355,7 +355,7 @@ function resizeCanvas(oldCanvas, perc) {
   let height = oldCanvas.height;
   let rescaledCanvas = document.createElement('canvas');
   rescaledCanvas.width = width * perc;
-  rescaledCanvas.height = height * 0.45;
+  rescaledCanvas.height = height * perc;
   let rescaledContext = rescaledCanvas.getContext('2d');
   rescaledContext.drawImage(oldCanvas, 0, 0, width, height, 0, 0, width * perc, height * perc);
   return rescaledCanvas;
