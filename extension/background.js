@@ -103,6 +103,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
               startIntervalTimer(tabId, 'onUpdated');
             });
           });
+        } else {
+          // Start the timer to capture every X milliseconds
+          startIntervalTimer(tabId, 'onUpdated');
         }
       }
     });
