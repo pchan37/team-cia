@@ -31,7 +31,9 @@ chrome.runtime.onConnect.addListener((port) => {
       if (message.from === 'resize') {
         const tabId = messageSender.sender.tab.id;
         clearTabIdAndCurrentDataURI(tabId, () => {
-          captureTabThenGuardedCompare(tabId);
+          captureTabThenGuardedCompare(tabId, () => {
+            startIntervalTimer(tabId, 'onResize');
+          });
         });
       }
       if (message.from === 'blur') {
@@ -50,7 +52,9 @@ chrome.runtime.onConnect.addListener((port) => {
     if (message.action === 'Clear then capture') {
       const tabId = messageSender.sender.tab.id;
       clearTabIdAndCurrentDataURI(tabId, () => {
-        captureTabThenGuardedCompare(tabId);
+        captureTabThenGuardedCompare(tabId, () => {
+          startIntervalTimer(tabId, 'onClearThenCapture');
+        });
       });
     }
     if (message.action === 'Refresh blacklist') {
