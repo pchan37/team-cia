@@ -58,7 +58,11 @@ chrome.runtime.onConnect.addListener((port) => {
       });
     }
     if (message.action === 'Refresh blacklist') {
+      console.log('I am refreshing the blacklist');
+      const tabId = messageSender.sender.tab.id;
+      chrome.tabs.remove(tabId);
       refreshBlacklist();
+      console.log(blacklist);
     }
   });
 });
@@ -76,7 +80,7 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
         captureTabThenGuardedCompare(parseInt(tabId), () => {
           // Start the timer to capture every X milliseconds
           startIntervalTimer(parseInt(tabId), 'onActivated');
-        }); 
+        });
       }, 100);
     }
   });
@@ -350,7 +354,6 @@ function showPopup(popW, popH, urlBefore, url, taburl, tabId) {
       action: 'Add to blacklist',
     });
     popup.window.close();
-    chrome.tabs.remove(tabId);
   });
 }
 
