@@ -30,21 +30,18 @@ chrome.runtime.onConnect.addListener((port) => {
     if (message.action === 'Capture tab') {
       if (message.from === 'resize') {
         const tabId = messageSender.sender.tab.id;
-        clearTabIdAndCurrentDataURI(tabId);
-        captureTabThenGuardedCompare(tabId);
+        clearTabIdAndCurrentDataURI(tabId, () => {
+          captureTabThenGuardedCompare(tabId);
+        });
       }
       if (message.from === 'blur') {
         const blurTabId = messageSender.sender.tab.id;
         chrome.tabs.query({ currentWindow: true, active: true }, tabs => {
           const tabId = tabs[0].id;
           if (blurTabId === tabId) {
-            captureTabThenGuardedCompare(tabId);
-
-            // Start the timer to capture every X milliseconds
-            console.log('[DEBUG] Sending the message to start the timer due to blur.');
-            const port = chrome.tabs.connect(blurTabId);
-            port.postMessage({
-              action: 'Start the timer',
+            captureTabThenGuardedCompare(tabId, () => {
+              // Start the timer to capture every X milliseconds
+              startIntervalTimer(tabId, 'onBlur');
             });
           }
         });
@@ -71,14 +68,12 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
   chrome.storage.local.get([tabId], (result) => {
     if (result[tabId] !== null && result[tabId] !== undefined) {
       // This should be the second (or subsequent) capture
-      captureTabThenGuardedCompare(tabId);
-
-      // Start the timer to capture every X milliseconds
-      console.log('[DEBUG] Sending the message to start the timer due to onActivated.');
-      const port = chrome.tabs.connect(parseInt(tabId));
-      port.postMessage({
-        action: 'Start the timer',
-      });
+      setTimeout(() => {
+        captureTabThenGuardedCompare(parseInt(tabId), () => {
+          // Start the timer to capture every X milliseconds
+          startIntervalTimer(parseInt(tabId), 'onActivated');
+        }); 
+      }, 100);
     }
   });
 });
@@ -103,16 +98,12 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
           // Ensure that this is a clean first capture
           clearTabIdAndCurrentDataURI(tabId, () => {
-            captureTabThenGuardedCompare(tabId);
+            captureTabThenGuardedCompare(tabId, () => {
+              // Start the timer to capture every X milliseconds
+              startIntervalTimer(tabId, 'onUpdated');
+            });
           });
         }
-
-        // Start the timer to capture every X milliseconds
-        console.log('[DEBUG] Sending the message to start the timer due to onUpdated.');
-        const port = chrome.tabs.connect(tabId);
-        port.postMessage({
-          action: 'Start the timer',
-        });
       }
     });
   }
@@ -123,7 +114,7 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     delete prevURLTracker[tabId];
 });
 
-function captureTabThenGuardedCompare(activeTabId) {
+function captureTabThenGuardedCompare(activeTabId, callback) {
   chrome.tabs.captureVisibleTab(chrome.windows.WINDOW_ID_CURRENT, { format: 'png' }, dataURI => {
     // This is not actually something to worry about.  We don't want the
     // extension to error on restricted domains as you would need the activeTab
@@ -138,7 +129,7 @@ function captureTabThenGuardedCompare(activeTabId) {
           setTabIdAndCurrentDataURI(activeTabId, dataURI, null);
         } else {
           setTabIdAndCurrentDataURI(activeTabId, result[activeTabId], dataURI, () => {
-            guardedCompare(parseInt(activeTabId));
+            guardedCompare(parseInt(activeTabId), callback);
           });
         }
       });
@@ -148,7 +139,7 @@ function captureTabThenGuardedCompare(activeTabId) {
   });
 }
 
-function guardedCompare(tabId) {
+function guardedCompare(tabId, callback) {
   chrome.tabs.get(tabId, (tab) => {
     let prevURL = prevURLTracker[tabId];
     let currentURL = tab.url;
@@ -163,6 +154,7 @@ function guardedCompare(tabId) {
         }
       });
     };
+    callback();
   });
 }
 
@@ -190,6 +182,17 @@ function inBlacklist(url) {
     }
   });
   return blacklisted;
+}
+
+// Start the interval timer in attempt to store the latest image to compare to
+function startIntervalTimer(tabId, event) {
+  if (event) {
+    console.log(`[DEBUG] Starting interval timer from ${event}`);
+  }
+  const port = chrome.tabs.connect(tabId);
+  port.postMessage({
+    action: 'Start the timer',
+  });
 }
 
 // Set the data URI for both the entry associated with the tabId and the entry
